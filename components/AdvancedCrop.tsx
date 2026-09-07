@@ -847,12 +847,9 @@ export default function AdvancedCrop() {
                 style={{
                   marginTop: 2,
                   padding: 14,
-                  border: "1px solid #29485f",
+                  border: "1px solid rgba(130, 130, 130, 0.3)",
                   borderRadius: 12,
-                  background:
-                    "linear-gradient(180deg, #102b40 0%, #0d2436 100%)",
-                  boxShadow:
-                    "inset 0 1px 0 rgba(255,255,255,.035)",
+                  background: "rgba(130, 130, 130, 0.05)",
                 }}
               >
                 <label
