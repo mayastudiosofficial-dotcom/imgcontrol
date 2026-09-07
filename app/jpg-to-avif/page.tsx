@@ -2,9 +2,24 @@ import type { Metadata } from "next";
 import DedicatedImageConverterPage from "@/components/DedicatedImageConverterPage";
 
 export const metadata: Metadata = {
-  title: "JPG to AVIF — Free Online Converter | ImgControl",
-  description: "Convert JPG and JPEG images to AVIF format online for free.",
-  alternates: { canonical: "/jpg-to-avif" },
+  title: "JPG to AVIF Converter Online – Free | ImgControl",
+  description:
+    "Convert JPG and JPEG images to AVIF online for free. Create smaller, modern image files for the web while maintaining excellent visual quality. Fast, secure and browser-based.",
+  alternates: {
+    canonical: "/jpg-to-avif",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+  openGraph: {
+    title: "JPG to AVIF Converter Online – Free | ImgControl",
+    description:
+      "Convert JPG and JPEG images to AVIF online for free. Create modern, web-friendly AVIF images directly in your browser.",
+    url: "https://imgcontrol.com/jpg-to-avif",
+    siteName: "ImgControl",
+    type: "website",
+  },
 };
 
 export default function Page() {
