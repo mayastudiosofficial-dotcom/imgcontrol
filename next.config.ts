@@ -2,16 +2,18 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   swcMinify: false,
-  webpack: (config) => {
-    // Vercel-কে কোনো কোড কাটতে বা ডিলিট করতে (Tree Shaking) সম্পূর্ণ নিষেধ করা হলো
-    config.optimization.minimize = false;
-    config.optimization.usedExports = false;
-    config.optimization.providedExports = false;
-    config.optimization.sideEffects = false;
-    config.optimization.concatenateModules = false;
-    
-    // Web Worker-এর জন্য গ্লোবাল অবজেক্ট ফিক্স করা
-    config.output.globalObject = "self";
+  webpack: (config, { isServer }) => {
+    // WASM ফাইলগুলোর সঠিক হ্যান্ডেলিংয়ের জন্য
+    config.experiments = {
+      ...config.experiments,
+      asyncWebAssembly: true,
+      layers: true,
+    };
+
+    // কোড মিনিফিকেশন এবং ট্রি-শেকিন বন্ধ রাখা যাতে WASM ফাংশন না ভাঙে
+    if (!isServer) {
+      config.optimization.minimize = false;
+    }
 
     return config;
   },
