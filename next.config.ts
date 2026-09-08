@@ -14,7 +14,7 @@ const nextConfig: NextConfig = {
           },
           {
             key: "Cross-Origin-Embedder-Policy",
-            value: "require-corp",
+            value: "require-corp", // <-- ঠিক এই জায়গাটিতে পরিবর্তন করা হয়েছে
           },
         ],
       },
