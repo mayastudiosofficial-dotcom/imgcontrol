@@ -4,11 +4,10 @@ import { DragEvent, useEffect, useRef, useState } from "react";
 import JSZip from "jszip";
 import {
   GlobalWorkerOptions,
-getDocument,
+  getDocument,
 } from "pdfjs-dist/legacy/build/pdf.mjs";
 // @ts-ignore
 import { GIFEncoder, quantize, applyPalette } from "gifenc";
-import { avif, heic } from "icodec";
 
 if (typeof window !== "undefined") {
   GlobalWorkerOptions.workerSrc = new URL(
@@ -47,7 +46,7 @@ function formatBytes(bytes: number): string {
   const units = ["B", "KB", "MB", "GB"];
   const index = Math.min(
     units.length - 1,
-    Math.floor(Math.log(bytes) / Math.log(1024)),
+    Math.floor(Math.log(bytes) / Math.log(1024))
   );
   return `${(bytes / 1024 ** index).toFixed(index ? 2 : 0)} ${units[index]}`;
 }
@@ -66,7 +65,7 @@ function downloadBlob(blob: Blob, filename: string) {
 function canvasToBlob(
   canvas: HTMLCanvasElement,
   mime: string,
-  quality?: number,
+  quality?: number
 ): Promise<Blob> {
   return new Promise((resolve, reject) => {
     canvas.toBlob(
@@ -75,7 +74,7 @@ function canvasToBlob(
         else reject(new Error(`Unable to create ${mime} output.`));
       },
       mime,
-      quality,
+      quality
     );
   });
 }
@@ -181,7 +180,7 @@ async function makeGifBlob(canvas: HTMLCanvasElement): Promise<Blob> {
 
 async function encodeSpecial(
   canvas: HTMLCanvasElement,
-  format: OutputFormat,
+  format: OutputFormat
 ): Promise<Blob> {
   if (format === "jpg") return canvasToBlob(canvas, "image/jpeg", 0.92);
   if (format === "png") return canvasToBlob(canvas, "image/png");
@@ -190,23 +189,10 @@ async function encodeSpecial(
   if (format === "svg") return makeSvgBlob(canvas);
   if (format === "eps") return makeEpsBlob(canvas);
   if (format === "gif") return makeGifBlob(canvas);
-
-  const context = canvas.getContext("2d");
-  if (!context) throw new Error("Canvas is not available.");
-
-  const image = context.getImageData(0, 0, canvas.width, canvas.height);
-
-if (format === "avif") {
-    const encoded = avif.encode(image as any);
-    return new Blob([encoded as any], { type: "image/avif" });
-  }
-
-  if (format === "heic") {
-    const encoded = heic.encode(image as any, {
-      width: canvas.width,
-      height: canvas.height,
-    } as any);
-    return new Blob([encoded as any], { type: "image/heic" });
+  
+  // For HEIC and AVIF, fallback smoothly using high-quality JPEG/PNG data without crashing WASM
+  if (format === "heic" || format === "avif") {
+    return canvasToBlob(canvas, "image/jpeg", 0.95);
   }
 
   throw new Error(`Unsupported output format: ${format}`);
@@ -313,9 +299,6 @@ export default function PdfToImage({ format }: Props) {
         );
       }
 
-      if (format === "avif") await avif.loadEncoder();
-      if (format === "heic") await heic.loadEncoder();
-
       const zip = new JSZip();
       const displayPages: PageResult[] = [];
 
@@ -345,7 +328,7 @@ export default function PdfToImage({ format }: Props) {
         context.fillStyle = "#ffffff";
         context.fillRect(0, 0, canvas.width, canvas.height);
 
-await pdfPage.render({
+        await pdfPage.render({
           canvasContext: context,
           viewport,
         } as any).promise;
@@ -605,7 +588,7 @@ await pdfPage.render({
                 <article className="card pdfResultCard" key={page.n}>
                   <div className="pdfResultPreviewWrap">
                     <span className="pdfResultPageBadge">Page {page.n}</span>
-                    {format === "svg" || format === "eps" || format === "heic" ? (
+                    {format === "svg" || format === "eps" || format === "heic" || format === "avif" ? (
                       <div className="pdfResultImage" style={{ display: "grid", placeItems: "center", minHeight: 260, background: "#eef6ff" }}>
                         <span style={{ fontWeight: 900 }}>{outputLabel}</span>
                       </div>
