@@ -8,7 +8,6 @@
     "start": "next start"
   },
   "dependencies": {
-    "@pbk20191/icodec": "^0.9.3",
     "@types/node": "^20.19.0",
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.0",
