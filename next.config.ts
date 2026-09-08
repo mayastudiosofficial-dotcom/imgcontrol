@@ -1,7 +1,12 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  swcMinify: false, // Vercel-কে WASM কোড ভাঙতে বাধা দেবে
+  swcMinify: false,
+  webpack: (config) => {
+    // Vercel-কে কোড ভাঙতে এবং রিনেম করতে পুরোপুরি বাধা দেবে
+    config.optimization.minimize = false;
+    return config;
+  },
   async headers() {
     return [
       {
