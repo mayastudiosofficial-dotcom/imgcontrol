@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  swcMinify: false, // Vercel-কে WASM কোড ভাঙতে বাধা দেবে
   async headers() {
     return [
       {
