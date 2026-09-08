@@ -1,8 +1,6 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  poweredByHeader: false,
-
   async headers() {
     return [
       {
@@ -14,7 +12,7 @@ const nextConfig: NextConfig = {
           },
           {
             key: "Cross-Origin-Embedder-Policy",
-            value: "require-corp", // <-- ঠিক এই জায়গাটিতে পরিবর্তন করা হয়েছে
+            value: "require-corp",
           },
         ],
       },
