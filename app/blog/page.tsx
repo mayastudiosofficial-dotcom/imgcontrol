@@ -1,12 +1,24 @@
 import Link from "next/link";
 import Image from "next/image";
 import type { Metadata } from "next";
-import blogImage from "./jpg-vs-png.png";
+
+import image01 from "./01-how-to-compress-images.png";
+import image02 from "./02-jpg-vs-png.png";
+import image03 from "./03-what-is-webp.png";
+import image04 from "./04-how-to-convert-pdf-to-jpg.png";
+import image05 from "./05-how-to-convert-images-to-pdf.png";
+import image06 from "./06-how-to-resize-images-before-publishing.png";
+import image07 from "./07-how-to-optimize-images-for-a-website.png";
+import image08 from "./08-jpg-png-webp-avif-guide.png";
+import image09 from "./09-pdf-vs-jpg.png";
+import image10 from "./10-heic-vs-jpg.png";
+import image11 from "./11-heic-to-jpg-without-losing-quality.png";
+import image12 from "./12-raw-to-jpg-without-losing-details.png";
 
 export const metadata: Metadata = {
   title: "ImgControl Blog – Image & PDF Guides, Tips and Tutorials",
   description:
-    "Learn practical image and PDF tips with ImgControl guides covering image compression, JPG, PNG, WebP, AVIF, PDF conversion, resizing, optimization and file formats.",
+    "Learn practical image and PDF tips with ImgControl guides covering image compression, JPG, PNG, WebP, AVIF, PDF conversion, resizing, optimization, HEIC, RAW and more.",
   alternates: {
     canonical: "/blog",
   },
@@ -18,96 +30,150 @@ const posts = [
     title: "How to Compress Images Without Losing Too Much Quality",
     description:
       "Learn how image compression works, what affects file size, and how to balance image quality with practical file sizes for websites, social media and everyday use.",
+    image: image01,
+    imageAlt: "How to compress images without losing quality",
     article: "/blog/how-to-compress-images-without-losing-quality",
     tool: "/image-compressor",
     toolLabel: "Image Compressor",
   },
+
   {
     category: "IMAGE FORMATS",
     title: "JPG vs PNG: Which Image Format Should You Use?",
     description:
       "Understand the practical differences between JPG and PNG, including compression, transparency, photographs, screenshots, graphics, websites and file size.",
+    image: image02,
+    imageAlt: "JPG vs PNG comparison",
     article: "/blog/jpg-vs-png",
     tool: "/jpg-to-png",
     toolLabel: "JPG to PNG",
   },
+
   {
     category: "MODERN IMAGE FORMATS",
     title: "What Is WebP and Why Is It Used on Websites?",
     description:
       "Learn what WebP is, why it is popular for modern websites, how it compares with JPG and PNG, and when WebP may be useful.",
+    image: image03,
+    imageAlt: "What is WebP guide",
     article: "/blog/what-is-webp",
     tool: "/jpg-to-webp",
     toolLabel: "JPG to WebP",
   },
+
   {
     category: "PDF CONVERSION",
     title: "How to Convert PDF to JPG Easily",
     description:
       "A practical guide to converting PDF pages into JPG images for sharing, publishing, editing, previews and everyday document workflows.",
+    image: image04,
+    imageAlt: "How to convert PDF to JPG",
     article: "/blog/how-to-convert-pdf-to-jpg",
     tool: "/pdf-to-jpg",
     toolLabel: "PDF to JPG",
   },
+
   {
     category: "PDF & IMAGE TOOLS",
     title: "How to Convert Images to PDF",
     description:
       "Learn how to combine JPG, PNG and other images into a PDF document for printing, sharing, archiving and professional document workflows.",
+    image: image05,
+    imageAlt: "How to convert images to PDF",
     article: "/blog/how-to-convert-images-to-pdf",
     tool: "/image-to-pdf",
     toolLabel: "Image to PDF",
   },
+
   {
     category: "IMAGE RESIZING",
     title: "How to Resize Images Before Publishing",
     description:
       "Understand image dimensions, width, height, aspect ratio and why resizing photographs before publishing can improve page speed and presentation.",
+    image: image06,
+    imageAlt: "How to resize images before publishing",
     article: "/blog/resize-images-before-publishing",
     tool: "/image-resizer",
     toolLabel: "Image Resizer",
   },
+
   {
     category: "WEB IMAGE OPTIMIZATION",
     title: "How to Optimize Images for a Website",
     description:
       "Discover practical ways to prepare images for websites by considering dimensions, formats, compression, file size and browser-friendly delivery.",
+    image: image07,
+    imageAlt: "How to optimize images for a website",
     article: "/blog/how-to-optimize-images-for-a-website",
     tool: "/image-optimizer",
     toolLabel: "Image Optimizer",
   },
+
   {
     category: "IMAGE FORMAT GUIDE",
     title: "JPG vs PNG vs WebP vs AVIF",
     description:
       "Compare popular image formats and learn how compression, transparency, quality and browser support affect the best format for different situations.",
+    image: image08,
+    imageAlt: "JPG PNG WebP AVIF comparison",
     article: "/blog/jpg-png-webp-avif-guide",
     tool: "/jpg-to-webp",
     toolLabel: "JPG to WebP",
   },
+
   {
     category: "DOCUMENT FORMATS",
     title: "PDF vs JPG: When Should You Use Each?",
     description:
       "Explore the differences between PDF and JPG files and learn which format may be more practical for documents, photographs, printing and sharing.",
+    image: image09,
+    imageAlt: "PDF vs JPG comparison",
     article: "/blog/pdf-vs-jpg",
     tool: "/pdf-to-jpg",
     toolLabel: "PDF to JPG",
   },
+
   {
     category: "IMAGE FORMATS",
     title: "HEIC vs JPG: What Is the Difference?",
     description:
       "Learn how HEIC and JPG differ in image quality, compression, compatibility, storage and everyday use across phones, computers and websites.",
+    image: image10,
+    imageAlt: "HEIC vs JPG comparison",
     article: "/blog/heic-vs-jpg",
     tool: "/heic-to-jpg",
     toolLabel: "HEIC to JPG",
+  },
+
+  {
+    category: "HEIC TO JPG",
+    title: "How to Convert HEIC to JPG Without Losing Quality",
+    description:
+      "Learn how to convert HEIC photos to JPG while preserving important image details, suitable resolution and practical visual quality.",
+    image: image11,
+    imageAlt: "Convert HEIC to JPG without losing quality",
+    article: "/blog/heic-to-jpg-without-losing-quality",
+    tool: "/heic-to-jpg",
+    toolLabel: "HEIC to JPG",
+  },
+
+  {
+    category: "RAW TO JPG",
+    title: "How to Convert RAW to JPG Without Losing Important Details",
+    description:
+      "Learn how to convert RAW camera images to JPG while preserving important details, resolution and practical image quality for websites, sharing and printing.",
+    image: image12,
+    imageAlt: "Convert RAW to JPG without losing important details",
+    article: "/blog/raw-to-jpg-without-losing-details",
+    tool: "/raw-to-jpg",
+    toolLabel: "RAW to JPG",
   },
 ];
 
 export default function BlogPage() {
   return (
     <main>
+      {/* HERO */}
       <section className="pageHead">
         <div className="container">
           <div className="kicker">ImgControl Blog</div>
@@ -123,6 +189,7 @@ export default function BlogPage() {
         </div>
       </section>
 
+      {/* MAIN CONTENT */}
       <section className="section">
         <div className="container">
 
@@ -181,9 +248,9 @@ export default function BlogPage() {
                   overflow: "hidden",
                 }}
               >
-
                 {/* IMAGE */}
                 <div
+                  className="blog-image-wrap"
                   style={{
                     position: "relative",
                     width: "100%",
@@ -195,10 +262,10 @@ export default function BlogPage() {
                   }}
                 >
                   <Image
-                    src={blogImage}
-                    alt={post.title}
+                    src={post.image}
+                    alt={post.imageAlt}
                     fill
-                    priority={index === 0}
+                    priority={index < 3}
                     sizes="(max-width: 600px) 100vw, (max-width: 900px) 50vw, 33vw"
                     style={{
                       objectFit: "cover",
@@ -252,7 +319,6 @@ export default function BlogPage() {
 
                 {/* BUTTONS */}
                 <div
-                  className="blog-buttons"
                   style={{
                     display: "grid",
                     gridTemplateColumns: "1fr 1fr",
@@ -264,7 +330,7 @@ export default function BlogPage() {
                   {/* READ GUIDE */}
                   <Link
                     href={post.article}
-                    className="blog-premium-btn"
+                    className="blog-premium-btn blog-read-btn"
                     style={{
                       display: "flex",
                       alignItems: "center",
@@ -291,7 +357,7 @@ export default function BlogPage() {
                   {/* TOOL */}
                   <Link
                     href={post.tool}
-                    className="blog-premium-btn"
+                    className="blog-premium-btn blog-tool-btn"
                     style={{
                       display: "flex",
                       alignItems: "center",
@@ -355,7 +421,7 @@ export default function BlogPage() {
         </div>
       </section>
 
-      {/* PREMIUM BUTTON HOVER + RESPONSIVE CSS */}
+      {/* HOVER + RESPONSIVE */}
       <style>{`
         .blog-premium-btn {
           transition:
@@ -374,13 +440,27 @@ export default function BlogPage() {
           transform: translateY(-1px) scale(0.99);
         }
 
-        .blog-grid {
-          width: 100%;
+        .blog-image-wrap {
+          overflow: hidden;
+        }
+
+        .blog-image-wrap img {
+          transition:
+            transform 0.35s ease,
+            filter 0.35s ease;
+        }
+
+        .blog-image-wrap:hover img {
+          transform: scale(1.045);
+          filter: brightness(1.04);
         }
 
         @media (max-width: 900px) {
           .blog-grid {
-            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            grid-template-columns: repeat(
+              2,
+              minmax(0, 1fr)
+            ) !important;
           }
         }
 
