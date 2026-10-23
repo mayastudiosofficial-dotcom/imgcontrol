@@ -42,7 +42,39 @@ function pixelTo8(value: number, bits: number) {
   return Math.min(255, Math.max(0, value));
 }
 
-async function rawToJpeg(file: File, maxBytes?: number) {
+/*
+ * Decoding a camera RAW needs a few hundred MB, so only one file is ever
+ * decoded at a time (previews and conversions share this queue).
+ */
+let decodeChain: Promise<unknown> = Promise.resolve();
+
+function oneAtATime<T>(job: () => Promise<T>): Promise<T> {
+  const run = decodeChain.then(job, job);
+  decodeChain = run.catch(() => undefined);
+  return run;
+}
+
+/**
+ * Previews are decoded at half size. A full conversion that fails (usually the
+ * browser running out of memory on a large file) is retried at half size too.
+ */
+async function rawToJpeg(file: File, maxBytes?: number, preview = false) {
+  return oneAtATime(async () => {
+    if (preview) return { ...(await decodeRaw(file, maxBytes, true)), reduced: false };
+
+    try {
+      return { ...(await decodeRaw(file, maxBytes, false)), reduced: false };
+    } catch (firstError) {
+      try {
+        return { ...(await decodeRaw(file, maxBytes, true)), reduced: true };
+      } catch {
+        throw firstError;
+      }
+    }
+  });
+}
+
+async function decodeRaw(file: File, maxBytes: number | undefined, halfSize: boolean) {
   const raw = new LibRaw();
 
   try {
@@ -54,10 +86,14 @@ async function rawToJpeg(file: File, maxBytes?: number) {
       outputBps: 8,
       userFlip: -1,
       userQual: 3,
+      halfSize,
     });
 
     const decoded = await raw.imageData();
     if (!decoded) throw new Error("RAW decoder returned no image data.");
+
+    // The decoder keeps hundreds of MB of WebAssembly memory; free it as soon as the pixels are here.
+    raw.dispose();
 
     const width = decoded.width;
     const height = decoded.height;
@@ -75,7 +111,8 @@ async function rawToJpeg(file: File, maxBytes?: number) {
     const context = canvas.getContext("2d");
     if (!context) throw new Error("Canvas is not available in this browser.");
 
-    const rgba = new Uint8ClampedArray(width * height * 4);
+    const imageData = context.createImageData(width, height);
+    const rgba = imageData.data;
 
     for (let i = 0, pixel = 0; pixel < width * height; pixel += 1, i += colors) {
       const r = pixelTo8(source[i] ?? 0, bits);
@@ -89,19 +126,25 @@ async function rawToJpeg(file: File, maxBytes?: number) {
       rgba[out + 3] = 255;
     }
 
-    context.putImageData(new ImageData(rgba, width, height), 0, 0);
+    context.putImageData(imageData, 0, 0);
 
     const render = (w: number, h: number, q: number) =>
       new Promise<Blob>((resolve, reject) => {
-        const output = document.createElement("canvas");
-        output.width = w;
-        output.height = h;
-        const outCtx = output.getContext("2d");
-        if (!outCtx) {
-          reject(new Error("Canvas is not available in this browser."));
-          return;
+        // At full size the canvas is encoded directly, which saves a second full-size bitmap.
+        let output = canvas;
+
+        if (w !== width || h !== height) {
+          output = document.createElement("canvas");
+          output.width = w;
+          output.height = h;
+          const outCtx = output.getContext("2d");
+          if (!outCtx) {
+            reject(new Error("Canvas is not available in this browser."));
+            return;
+          }
+          outCtx.drawImage(canvas, 0, 0, w, h);
         }
-        outCtx.drawImage(canvas, 0, 0, w, h);
+
         output.toBlob(
           (blob) => (blob ? resolve(blob) : reject(new Error("Unable to create JPG output."))),
           "image/jpeg",
@@ -189,6 +232,7 @@ export default function RawToJpgClient() {
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
 
   function selectFiles(list: FileList | File[]) {
     const accepted = Array.from(list).filter((file) => {
@@ -218,7 +262,7 @@ export default function RawToJpgClient() {
     (async () => {
       for (const file of nextFiles) {
         try {
-          const preview = await rawToJpeg(file, 350 * 1024);
+          const preview = await rawToJpeg(file, 350 * 1024, true);
           const previewUrl = URL.createObjectURL(preview.blob);
 
           setPreviewMap((current) => {
@@ -241,9 +285,11 @@ export default function RawToJpgClient() {
     setBusy(true);
     setProgress(0);
     setError("");
+    setNotice("");
 
     try {
       const next: Output[] = [];
+      let reducedCount = 0;
       const maxBytes = targetEnabled
         ? (unit === "MB" ? target * 1024 * 1024 : target * 1024)
         : undefined;
@@ -251,6 +297,7 @@ export default function RawToJpgClient() {
       for (let i = 0; i < files.length; i += 1) {
         const file = files[i];
         const converted = await rawToJpeg(file, maxBytes);
+        if (converted.reduced) reducedCount += 1;
         next.push({
           name: `${stripExt(file.name)}.jpg`,
           blob: converted.blob,
@@ -263,6 +310,12 @@ export default function RawToJpgClient() {
       }
 
       setOutputs(next);
+
+      if (reducedCount) {
+        setNotice(
+          `Your browser ran low on memory, so ${reducedCount === 1 ? "1 file was" : `${reducedCount} files were`} converted at half resolution. Close other tabs and convert again for full size.`,
+        );
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "RAW conversion failed.");
     } finally {
@@ -304,6 +357,7 @@ export default function RawToJpgClient() {
     setOutputs([]);
     setProgress(0);
     setError("");
+    setNotice("");
     if (input.current) input.current.value = "";
   }
 
@@ -451,6 +505,7 @@ export default function RawToJpgClient() {
         )}
 
         {error && <div className="notice">{error}</div>}
+        {notice && <div className="notice">{notice}</div>}
 
         <div className="actions" style={{ justifyContent: "flex-start", marginTop: 18 }}>
           <button type="button" className="btn btnPrimary" disabled={!files.length || busy} onClick={convertAll}>

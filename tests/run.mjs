@@ -357,6 +357,14 @@ async function runPdf() {
       expect(res.ok, "no real heic output");
       const gap = await page.evaluate(() => window.__maxGap);
       expect(gap < 1500, `page was blocked for ${Math.round(gap)} ms while encoding`);
+
+      // The result card must show the page itself, not a text placeholder.
+      const thumb = page.locator("img.pdfResultImage").first();
+      await thumb.waitFor({ timeout: 10000 });
+      await page.waitForFunction(() => {
+        const el = document.querySelector("img.pdfResultImage");
+        return el && el.complete && el.naturalWidth > 100;
+      }, null, { timeout: 10000 });
     } finally {
       await page.context().close();
     }
@@ -574,6 +582,29 @@ async function runExtras() {
         await page.getByRole("button", { name: /Convert RAW to JPG/i }).click();
         const res = await page.evaluate(() => window.__waitFor("jpg", 120000));
         expect(res.ok, `no jpg output (saw: ${(res.seen || []).join(", ") || "nothing"})`);
+      } finally {
+        await page.context().close();
+      }
+    });
+
+    await test("raw-to-jpg: low memory falls back to half size instead of failing", async () => {
+      const page = await newPage();
+      try {
+        // Pretend the browser cannot allocate a full-size image, like a machine that is short on memory.
+        await page.addInitScript(() => {
+          const original = CanvasRenderingContext2D.prototype.createImageData;
+          CanvasRenderingContext2D.prototype.createImageData = function (w, h) {
+            if (typeof w === "number" && w * h > 20_000_000) throw new RangeError("Array buffer allocation failed");
+            return original.apply(this, arguments);
+          };
+        });
+        await page.goto(`${BASE}/raw-to-jpg`);
+        await page.locator("input[type=file]").first().setInputFiles(process.env.RAW_SAMPLE);
+        await page.waitForTimeout(600);
+        await page.getByRole("button", { name: /Convert RAW to JPG/i }).click();
+        const res = await page.evaluate(() => window.__waitFor("jpg", 120000));
+        expect(res.ok, `no jpg output (saw: ${(res.seen || []).join(", ") || "nothing"})`);
+        await page.getByText(/converted at half resolution/i).waitFor({ timeout: 120000 });
       } finally {
         await page.context().close();
       }
