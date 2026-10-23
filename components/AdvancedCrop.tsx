@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { normalizeInputFile } from "@/lib/codecs";
 
 type CropRect = {
   x: number;
@@ -22,6 +23,7 @@ export default function AdvancedCrop() {
     h: 100,
   });
   const [ratio, setRatio] = useState("free");
+  const [preparing, setPreparing] = useState(false);
   const [outputWidth, setOutputWidth] = useState(0);
   const [outputHeight, setOutputHeight] = useState(0);
   const [result, setResult] = useState<Blob | null>(null);
@@ -84,9 +86,14 @@ export default function AdvancedCrop() {
       return;
     }
 
-    setFile(nextFile);
     setResult(null);
     setError("");
+    setPreparing(true);
+
+    normalizeInputFile(nextFile)
+      .then((ready) => setFile(ready))
+      .catch(() => setError("This image could not be read."))
+      .finally(() => setPreparing(false));
   }
 
   function handleImageLoad(event: React.SyntheticEvent<HTMLImageElement>) {
@@ -105,16 +112,21 @@ export default function AdvancedCrop() {
   }
 
   function updateCrop(partial: Partial<CropRect>) {
-    setCrop((current) => {
-      const next = { ...current, ...partial };
+    const next = { ...crop, ...partial };
 
-      next.x = Math.max(0, Math.min(next.x, Math.max(0, imageSize.w - 1)));
-      next.y = Math.max(0, Math.min(next.y, Math.max(0, imageSize.h - 1)));
-      next.w = Math.max(1, Math.min(next.w, imageSize.w - next.x));
-      next.h = Math.max(1, Math.min(next.h, imageSize.h - next.y));
+    next.x = Math.max(0, Math.min(next.x, Math.max(0, imageSize.w - 1)));
+    next.y = Math.max(0, Math.min(next.y, Math.max(0, imageSize.h - 1)));
+    next.w = Math.max(1, Math.min(next.w, imageSize.w - next.x));
+    next.h = Math.max(1, Math.min(next.h, imageSize.h - next.y));
 
-      return next;
-    });
+    setCrop(next);
+
+    // Keep the export size in step with the crop (as dragging the box does),
+    // otherwise the cropped area is stretched to the previous export size.
+    if (Math.round(next.w) !== Math.round(crop.w) || Math.round(next.h) !== Math.round(crop.h)) {
+      setOutputWidth(Math.round(next.w));
+      setOutputHeight(Math.round(next.h));
+    }
   }
 
   function applyRatio(nextRatio: string) {
@@ -952,6 +964,7 @@ export default function AdvancedCrop() {
               </div>
             </div>
 
+            {preparing && <div className="notice">Reading your photo, the preview will appear in a moment…</div>}
             {error && <div className="notice">{error}</div>}
 
             <div className="actions" style={{ justifyContent: "stretch", marginTop: 18 }}>

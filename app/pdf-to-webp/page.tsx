@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import PdfToImage from "@/components/PdfToImage";
+import ToolSeoContent from "@/components/ToolSeoContent";
 
 export const metadata: Metadata = {
-  title: "PDF to WebP Converter Free Online | ImgControl",
+  title: "PDF to WebP Converter Free Online",
   description:
     "Convert PDF to WebP online for free with a fast, high-quality PDF to WebP image converter. Create WebP images from PDF pages for websites, sharing and digital projects.",
   alternates: {
@@ -766,6 +767,7 @@ export default function Page() {
           </article>
         </div>
       </section>
+    <ToolSeoContent slug="pdf-to-webp" />
     </>
   );
 }

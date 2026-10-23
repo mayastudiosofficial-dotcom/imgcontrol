@@ -1,8 +1,9 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import ArticleJsonLd from "@/components/ArticleJsonLd";
 
 export const metadata: Metadata = {
-  title: "How to Convert PDF to JPG Easily | ImgControl",
+  title: "How to Convert PDF to JPG Easily",
   description:
     "Learn how to convert PDF pages to JPG images, choose the right image quality and resolution, and prepare PDF pages for sharing, publishing and everyday use.",
   alternates: {
@@ -436,6 +437,7 @@ export default function Page() {
           </article>
         </div>
       </section>
+    <ArticleJsonLd slug="how-to-convert-pdf-to-jpg" />
     </main>
   );
 }

@@ -1,6 +1,10 @@
 "use client";
 
 import JSZip from "jszip";
+import { encodeCanvasWithWasm, isHeicFile, needsWasmEncoder, normalizeInputFile } from "@/lib/codecs";
+import { creep, nextFrame } from "@/lib/progress";
+import NextSteps from "@/components/NextSteps";
+import FilePreview from "@/components/FilePreview";
 import {
   ChangeEvent,
   DragEvent,
@@ -105,9 +109,27 @@ function canvasToBlob(
 async function convertImage(
   file: File,
   outputMime: string,
-  maxBytes?: number
+  maxBytes?: number,
+  onProgress: (fraction: number) => void = () => {}
 ) {
-  const image = await loadImage(file);
+  onProgress(0.02);
+
+  let readable = file;
+
+  if (isHeicFile(file)) {
+    // Decoding a HEIC photo is the slow part; show steady movement while it runs.
+    const stop = creep(onProgress, 0.02, 0.6, 800 + (file.size / 1048576) * 350);
+
+    try {
+      readable = await normalizeInputFile(file);
+    } finally {
+      stop();
+    }
+  }
+
+  onProgress(0.62);
+  const image = await loadImage(readable);
+  onProgress(0.7);
 
   let width = image.naturalWidth;
   let height = image.naturalHeight;
@@ -147,6 +169,22 @@ async function convertImage(
       width,
       height
     );
+
+    onProgress(0.8);
+    await nextFrame();
+
+    if (needsWasmEncoder(outputMime)) {
+      const stop = creep(onProgress, 0.8, 0.98, 500 + ((width * height) / 1e6) * 700);
+
+      try {
+        return await encodeCanvasWithWasm(
+          canvas,
+          outputMime as "image/avif" | "image/heic"
+        );
+      } finally {
+        stop();
+      }
+    }
 
     return canvasToBlob(
       canvas,
@@ -192,6 +230,8 @@ async function convertImage(
       attempts++;
     }
   }
+
+  onProgress(1);
 
   return {
     blob,
@@ -254,6 +294,7 @@ export function FixedConverterClient({
 
   const [dragging, setDragging] =
     useState(false);
+  const [progress, setProgress] = useState(0);
 
   const [processing, setProcessing] =
     useState(false);
@@ -383,6 +424,7 @@ export function FixedConverterClient({
     }
 
     setProcessing(true);
+    setProgress(0);
     setError("");
     setResults([]);
 
@@ -395,15 +437,24 @@ export function FixedConverterClient({
       const converted: ResultItem[] =
         [];
 
-      for (const file of files) {
+      for (let index = 0; index < files.length; index += 1) {
+        const file = files[index];
+
         const originalUrl =
           URL.createObjectURL(file);
+
+        // The bar covers all files; inside one file it only moves forward.
+        let furthest = 0;
 
         const convertedData =
           await convertImage(
             file,
             outputMime,
-            maxBytes
+            maxBytes,
+            (fraction) => {
+              furthest = Math.max(furthest, Math.min(fraction, 0.99));
+              setProgress(Math.round(((index + furthest) / files.length) * 100));
+            }
           );
 
         const outputName =
@@ -428,6 +479,7 @@ export function FixedConverterClient({
         });
       }
 
+      setProgress(100);
       setResults(converted);
     } catch (conversionError) {
       console.error(
@@ -439,6 +491,7 @@ export function FixedConverterClient({
       );
     } finally {
       setProcessing(false);
+      setProgress(0);
     }
   }
 
@@ -827,12 +880,10 @@ export function FixedConverterClient({
                       <div className="fileMeta">
 
                         <div className="thumbnailWrap">
-                          <img
-                            src={URL.createObjectURL(
-                              file
-                            )}
+                          <FilePreview
+                            file={file}
                             alt={file.name}
-                            className="selectedThumb"
+                            style={{ width: "100%", height: "100%", display: "block", objectFit: "cover" }}
                           />
                         </div>
 
@@ -899,9 +950,22 @@ export function FixedConverterClient({
                 onClick={convertAll}
               >
                 {processing
-                  ? "Converting..."
+                  ? `Converting ${progress}%…`
                   : `Convert to ${outputLabel}`}
               </button>
+
+              {processing && (
+                <div
+                  className="progress"
+                  role="progressbar"
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={progress}
+                  style={{ width: "100%" }}
+                >
+                  <span style={{ width: `${progress}%` }} />
+                </div>
+              )}
 
               {files.length > 0 && (
                 <button
@@ -1063,7 +1127,7 @@ export function FixedConverterClient({
                             </div>
 
                             <div>
-                              PNG:{" "}
+                              {outputLabel}:{" "}
                               {formatBytes(
                                 item.outputSize
                               )}
@@ -1120,6 +1184,8 @@ export function FixedConverterClient({
               )}
 
             </div>
+
+            <NextSteps outputLabel={outputLabel} />
 
           </div>
         )}

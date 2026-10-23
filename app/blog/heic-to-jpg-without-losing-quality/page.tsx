@@ -1,8 +1,9 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import ArticleJsonLd from "@/components/ArticleJsonLd";
 
 export const metadata: Metadata = {
-  title: "How to Convert HEIC to JPG Without Losing Quality | ImgControl",
+  title: "How to Convert HEIC to JPG Without Losing Quality",
   description:
     "Learn how to convert HEIC photos to JPG without losing important quality. Understand image resolution, compression, file size and high-quality HEIC to JPG conversion.",
   alternates: {
@@ -588,6 +589,7 @@ export default function Page() {
           </article>
         </div>
       </section>
+    <ArticleJsonLd slug="heic-to-jpg-without-losing-quality" />
     </main>
   );
 }

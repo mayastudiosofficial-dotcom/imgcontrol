@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import DedicatedImageConverterPage from "@/components/DedicatedImageConverterPage";
 
 export const metadata: Metadata = {
-  title: "JPG to AVIF Converter Online – Free | ImgControl",
+  title: "JPG to AVIF Converter Online – Free",
   description:
     "Convert JPG and JPEG images to AVIF online for free. Create smaller, modern image files for the web while maintaining excellent visual quality. Fast, secure and browser-based.",
   alternates: {
@@ -25,6 +25,7 @@ export const metadata: Metadata = {
 export default function Page() {
   return (
     <DedicatedImageConverterPage
+      slug="jpg-to-avif"
       sourceLabel="JPG / JPEG"
       outputLabel="AVIF"
       outputMime="image/avif"

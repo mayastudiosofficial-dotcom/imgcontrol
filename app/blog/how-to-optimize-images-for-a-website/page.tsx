@@ -1,8 +1,9 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import ArticleJsonLd from "@/components/ArticleJsonLd";
 
 export const metadata: Metadata = {
-  title: "How to Optimize Images for a Website | ImgControl",
+  title: "How to Optimize Images for a Website",
   description:
     "Learn practical image optimization techniques for websites, including resizing, compression, image formats, dimensions, file size and responsive image delivery.",
   alternates: {
@@ -525,6 +526,7 @@ export default function Page() {
           </article>
         </div>
       </section>
+    <ArticleJsonLd slug="how-to-optimize-images-for-a-website" />
     </main>
   );
 }

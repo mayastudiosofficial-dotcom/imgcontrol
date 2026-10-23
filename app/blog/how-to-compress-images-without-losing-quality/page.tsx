@@ -1,9 +1,10 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import ArticleJsonLd from "@/components/ArticleJsonLd";
 
 export const metadata: Metadata = {
   title:
-    "How to Compress Images Without Losing Too Much Quality | ImgControl",
+    "How to Compress Images Without Losing Too Much Quality",
   description:
     "Learn how to compress images effectively, reduce JPG and PNG file size, choose the right quality settings, and prepare images for websites, social media and everyday use.",
   alternates: {
@@ -391,6 +392,7 @@ export default function Page() {
           </article>
         </div>
       </section>
+    <ArticleJsonLd slug="how-to-compress-images-without-losing-quality" />
     </main>
   );
 }

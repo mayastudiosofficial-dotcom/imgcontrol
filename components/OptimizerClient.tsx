@@ -2,6 +2,10 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { encodeCanvasWithWasm, normalizeInputFile } from "@/lib/codecs";
+import NextSteps from "@/components/NextSteps";
+import ResultThumb from "@/components/ResultThumb";
+import FilePreview from "@/components/FilePreview";
 import JSZip from "jszip";
 
 type ToolMode = "compress" | "convert" | "resize" | "optimize";
@@ -66,7 +70,9 @@ function stripExt(filename: string): string {
   return filename.replace(/\.[^.]+$/, "");
 }
 
-async function loadImage(file: File): Promise<HTMLImageElement> {
+async function loadImage(sourceFile: File): Promise<HTMLImageElement> {
+  const file = await normalizeInputFile(sourceFile);
+
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file);
     const image = new Image();
@@ -108,6 +114,10 @@ async function encodeImage(
   }
 
   context.drawImage(image, 0, 0, width, height);
+
+  if (mime === "image/avif") {
+    return encodeCanvasWithWasm(canvas, "image/avif", quality);
+  }
 
   return new Promise((resolve, reject) => {
     canvas.toBlob(
@@ -1390,11 +1400,6 @@ export default function OptimizerClient({
 
             {files.map(
               (file, index) => {
-                const previewUrl =
-                  URL.createObjectURL(
-                    file,
-                  );
-
                 return (
                   <div
                     className="fileRow"
@@ -1403,15 +1408,10 @@ export default function OptimizerClient({
 
                     <div className="fileMeta">
 
-                      <img
+                      <FilePreview
                         className="thumb"
-                        src={previewUrl}
+                        file={file}
                         alt={`Preview of ${file.name}`}
-                        onLoad={() =>
-                          URL.revokeObjectURL(
-                            previewUrl,
-                          )
-                        }
                       />
 
                       <div>
@@ -1618,6 +1618,10 @@ export default function OptimizerClient({
                     key={output.name}
                   >
 
+                    <div className="fileMeta">
+
+                    <ResultThumb blob={output.blob} alt={`Preview of ${output.name}`} />
+
                     <div>
 
                       <div className="fileName">
@@ -1658,6 +1662,8 @@ export default function OptimizerClient({
 
                     </div>
 
+                    </div>
+
                     <button
                       type="button"
                       className="btn btnPrimary btnSmall"
@@ -1675,6 +1681,8 @@ export default function OptimizerClient({
               )}
 
             </div>
+
+            <NextSteps outputLabel={format.replace("image/","").replace("jpeg","jpg")} />
 
           </div>
         )}

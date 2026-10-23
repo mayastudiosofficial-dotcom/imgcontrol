@@ -1,8 +1,9 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import ArticleJsonLd from "@/components/ArticleJsonLd";
 
 export const metadata: Metadata = {
-  title: "What Is WebP and Why Is It Used on Websites? | ImgControl",
+  title: "What Is WebP and Why Is It Used on Websites?",
   description:
     "Learn what WebP is, how WebP compression works, how it compares with JPG and PNG, and why modern websites often use WebP images.",
   alternates: {
@@ -466,6 +467,7 @@ export default function Page() {
           </article>
         </div>
       </section>
+    <ArticleJsonLd slug="what-is-webp" />
     </main>
   );
 }

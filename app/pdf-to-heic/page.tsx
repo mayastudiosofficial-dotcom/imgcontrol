@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import PdfToImage from "@/components/PdfToImage";
+import ToolSeoContent from "@/components/ToolSeoContent";
 
 export const metadata: Metadata = {
-  title: "PDF to HEIC Converter Online Free | ImgControl",
+  title: "PDF to HEIC Converter Online Free",
   description:
     "Convert PDF pages to HEIC online for free with a fast, high-quality PDF to HEIC image converter. Create HEIC images from PDF pages for compatible devices and digital workflows.",
   alternates: {
@@ -952,6 +953,7 @@ export default function Page() {
           </article>
         </div>
       </section>
+    <ToolSeoContent slug="pdf-to-heic" />
     </>
   );
 }

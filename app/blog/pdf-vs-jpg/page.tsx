@@ -1,8 +1,9 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import ArticleJsonLd from "@/components/ArticleJsonLd";
 
 export const metadata: Metadata = {
-  title: "PDF vs JPG: When Should You Use Each? | ImgControl",
+  title: "PDF vs JPG: When Should You Use Each?",
   description:
     "Learn the differences between PDF and JPG files, including quality, file size, text, printing, sharing, documents, photographs and practical everyday use cases.",
   alternates: {
@@ -664,6 +665,7 @@ export default function Page() {
           </article>
         </div>
       </section>
+    <ArticleJsonLd slug="pdf-vs-jpg" />
     </main>
   );
 }

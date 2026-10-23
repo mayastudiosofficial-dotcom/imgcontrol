@@ -1,6 +1,9 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { normalizeInputFile } from "@/lib/codecs";
+import PdfPreview from "@/components/PdfPreview";
+import FilePreview from "@/components/FilePreview";
 import { jsPDF } from "jspdf";
 
 function fmt(b: number) {
@@ -13,7 +16,6 @@ function fmt(b: number) {
 export default function ImageToPdf() {
   const input = useRef<HTMLInputElement>(null);
   const [files, setFiles] = useState<File[]>([]);
-  const [previews, setPreviews] = useState<string[]>([]);
   const [sizeOn, setSizeOn] = useState(false);
   const [target, setTarget] = useState(2);
   const [unit, setUnit] = useState<"MB" | "KB">("MB");
@@ -24,7 +26,7 @@ export default function ImageToPdf() {
   const [err, setErr] = useState("");
 
   function add(list: FileList) {
-    const rawImages = Array.from(list).filter((f) => f.type.startsWith("image/"));
+    const rawImages = Array.from(list).filter((f) => f.type.startsWith("image/") || /.(heic|heif|avif)$/i.test(f.name));
     
     if (files.length + rawImages.length > 50) {
       setErr("Maximum 50 images can be converted at a time. Extra images were skipped.");
@@ -34,7 +36,6 @@ export default function ImageToPdf() {
 
     const combined = [...files, ...rawImages].slice(0, 50);
     setFiles(combined);
-    setPreviews(combined.map((f) => URL.createObjectURL(f)));
     setResult(null);
   }
 
@@ -114,7 +115,9 @@ export default function ImageToPdf() {
 
     try {
       const loadedImages: HTMLImageElement[] = await Promise.all(
-        files.map((file) => {
+        files.map(async (original) => {
+          const file = await normalizeInputFile(original);
+
           return new Promise<HTMLImageElement>((resolve, reject) => {
             const url = URL.createObjectURL(file);
             const img = new Image();
@@ -245,7 +248,7 @@ export default function ImageToPdf() {
             {files.map((f, i) => (
               <div className="reorderItem" key={f.name + i}>
                 <span className="dragHandle">☷</span>
-                <img className="reorderThumb" src={previews[i]} alt="" />
+                <FilePreview className="reorderThumb" file={f} alt={`Preview of ${f.name}`} />
                 <div style={{ flex: 1 }}>
                   <strong>
                     {i + 1}. {f.name}
@@ -258,7 +261,6 @@ export default function ImageToPdf() {
                   onClick={() => {
                     const nf = files.filter((_, x) => x !== i);
                     setFiles(nf);
-                    setPreviews(nf.map((x) => URL.createObjectURL(x)));
                   }}
                 >
                   Remove
@@ -364,6 +366,8 @@ export default function ImageToPdf() {
             </button>
           )}
         </div>
+
+        {result && <PdfPreview blob={result} />}
       </div>
     </div>
   );

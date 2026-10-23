@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import DedicatedImageConverterPage from "@/components/DedicatedImageConverterPage";
 
 export const metadata: Metadata = {
-  title: "WebP to JPG Converter Online – Free | ImgControl",
+  title: "WebP to JPG Converter Online – Free",
   description:
     "Convert WebP images to JPG online for free. Save WebP as JPG, convert multiple images, and create widely compatible JPG files with a fast and simple browser-based converter.",
   alternates: {
@@ -32,6 +32,7 @@ export default function Page() {
   return (
     <>
       <DedicatedImageConverterPage
+      slug="webp-to-jpg"
         sourceLabel="WebP"
         outputLabel="JPG"
         outputMime="image/jpeg"

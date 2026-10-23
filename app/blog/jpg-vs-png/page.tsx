@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import ArticleJsonLd from "@/components/ArticleJsonLd";
 
 export const metadata: Metadata = {
-  title: "JPG vs PNG: Which Image Format Should You Use? | ImgControl",
+  title: "JPG vs PNG: Which Image Format Should You Use?",
   description:
     "JPG vs PNG explained in simple terms. Learn the differences in image quality, file size, compression, transparency, photography, websites and everyday use.",
   alternates: {
@@ -826,6 +827,7 @@ export default function BlogPost() {
           </article>
         </div>
       </section>
+    <ArticleJsonLd slug="jpg-vs-png" />
     </>
   );
 }

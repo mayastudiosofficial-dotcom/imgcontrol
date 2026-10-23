@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import OptimizerClient from "@/components/OptimizerClient";
+import ToolSeoContent from "@/components/ToolSeoContent";
 
 export const metadata: Metadata = {
-  title: "Image Optimizer Online – Optimize JPG, PNG, WebP, AVIF | ImgControl",
+  title: "Image Optimizer Online – Optimize JPG, PNG, WebP, AVIF",
   description:
     "Optimize JPG, PNG, WebP, GIF, BMP and AVIF images online for free. Reduce image file size, improve web performance and maintain excellent image quality with ImgControl.",
   alternates: {
@@ -38,6 +39,7 @@ export default function Page() {
       <section className="section" style={{ paddingTop: 18 }}>
         <OptimizerClient mode="optimize" />
       </section>
+    <ToolSeoContent slug="image-optimizer" />
     </>
   );
 }

@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import RawToJpgClient from "@/components/RawToJpgClient";
+import ToolSeoContent from "@/components/ToolSeoContent";
 
 export const metadata: Metadata = {
-  title: "RAW to JPG Converter Online Free | ImgControl",
+  title: "RAW to JPG Converter Online Free",
   description:
     "Convert RAW photos to JPG online for free with a fast, high-quality RAW to JPG image converter. Convert CR2, CR3, NEF, ARW, DNG, RAF, ORF and RW2 files, including multiple RAW images.",
   alternates: {
@@ -778,6 +779,7 @@ export default function Page() {
           </section>
         </div>
       </main>
+    <ToolSeoContent slug="raw-to-jpg" />
     </>
   );
 }

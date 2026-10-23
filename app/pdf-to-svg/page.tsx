@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import PdfToImage from "@/components/PdfToImage";
+import ToolSeoContent from "@/components/ToolSeoContent";
 
 export const metadata: Metadata = {
-  title: "PDF to SVG Converter Online Free | ImgControl",
+  title: "PDF to SVG Converter Online Free",
   description:
     "Convert PDF pages to SVG online for free with a high-quality PDF to SVG converter. Create SVG files from supported PDF pages for vector, web, editing and digital workflows.",
   alternates: {
@@ -798,6 +799,7 @@ export default function Page() {
           </article>
         </div>
       </section>
+    <ToolSeoContent slug="pdf-to-svg" />
     </>
   );
 }

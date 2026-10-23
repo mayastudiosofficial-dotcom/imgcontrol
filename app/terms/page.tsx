@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Terms of Use | ImgControl",
+  title: "Terms of Use",
   description:
     "Read the ImgControl Terms of Use covering website access, image and PDF tools, acceptable use, user responsibilities, intellectual property, limitations and other important terms.",
   alternates: {

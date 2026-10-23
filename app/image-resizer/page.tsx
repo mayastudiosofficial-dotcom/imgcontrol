@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import OptimizerClient from "@/components/OptimizerClient";
+import ToolSeoContent from "@/components/ToolSeoContent";
 
 export const metadata: Metadata = {
-  title: "Image Resizer Online – Resize JPG, PNG, WebP | ImgControl",
+  title: "Image Resizer Online – Resize JPG, PNG, WebP",
   description:
     "Resize JPG, PNG, WebP, GIF, BMP and AVIF images online for free. Change image width and height by exact dimensions or percentage while keeping the aspect ratio.",
   alternates: {
@@ -41,6 +42,7 @@ export default function Page() {
       <section className="section" style={{ paddingTop: 18 }}>
         <OptimizerClient mode="resize" />
       </section>
+    <ToolSeoContent slug="image-resizer" />
     </>
   );
 }

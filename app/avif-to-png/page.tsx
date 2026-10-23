@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import DedicatedImageConverterPage from "@/components/DedicatedImageConverterPage";
 
 export const metadata: Metadata = {
-  title: "AVIF to PNG Converter Online – Free | ImgControl",
+  title: "AVIF to PNG Converter Online – Free",
   description:
     "Convert AVIF to PNG online for free. Create high-quality PNG images for editing, transparency, design and everyday use with a fast and simple AVIF to PNG converter.",
   alternates: {
@@ -32,6 +32,7 @@ export default function Page() {
   return (
     <>
       <DedicatedImageConverterPage
+      slug="avif-to-png"
         sourceLabel="AVIF"
         outputLabel="PNG"
         outputMime="image/png"

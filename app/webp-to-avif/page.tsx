@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import DedicatedImageConverterPage from "@/components/DedicatedImageConverterPage";
 
 export const metadata: Metadata = {
-  title: "WebP to AVIF Converter Online – Free | ImgControl",
+  title: "WebP to AVIF Converter Online – Free",
   description:
     "Convert WebP to AVIF online for free. Create modern, web-friendly AVIF images with high visual quality. Fast, simple and easy WebP to AVIF conversion with ImgControl.",
   alternates: {
@@ -32,6 +32,7 @@ export default function Page() {
   return (
     <>
       <DedicatedImageConverterPage
+      slug="webp-to-avif"
         sourceLabel="WebP"
         outputLabel="AVIF"
         outputMime="image/avif"

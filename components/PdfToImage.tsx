@@ -8,6 +8,8 @@ import {
 } from "pdfjs-dist/legacy/build/pdf.mjs";
 // @ts-ignore
 import { GIFEncoder, quantize, applyPalette } from "gifenc";
+import FilePreview from "@/components/FilePreview";
+import { encodeCanvasWithWasm } from "@/lib/codecs";
 
 if (typeof window !== "undefined") {
   GlobalWorkerOptions.workerSrc = new URL(
@@ -30,6 +32,8 @@ type OutputFormat =
 type PageResult = {
   n: number;
   url: string;
+  /** Small JPEG for formats the browser cannot draw itself (HEIC, EPS, ...). */
+  previewUrl?: string;
   blob: Blob;
   width: number;
   height: number;
@@ -49,6 +53,18 @@ function formatBytes(bytes: number): string {
     Math.floor(Math.log(bytes) / Math.log(1024))
   );
   return `${(bytes / 1024 ** index).toFixed(index ? 2 : 0)} ${units[index]}`;
+}
+
+/** A small JPEG of the rendered page, used only for the thumbnail. */
+async function makePreviewUrl(source: HTMLCanvasElement): Promise<string | undefined> {
+  const scale = Math.min(1, 640 / source.width);
+  const preview = document.createElement("canvas");
+  preview.width = Math.max(1, Math.round(source.width * scale));
+  preview.height = Math.max(1, Math.round(source.height * scale));
+  preview.getContext("2d")?.drawImage(source, 0, 0, preview.width, preview.height);
+
+  const blob: Blob | null = await new Promise((resolve) => preview.toBlob(resolve, "image/jpeg", 0.85));
+  return blob ? URL.createObjectURL(blob) : undefined;
 }
 
 function downloadBlob(blob: Blob, filename: string) {
@@ -190,10 +206,8 @@ async function encodeSpecial(
   if (format === "eps") return makeEpsBlob(canvas);
   if (format === "gif") return makeGifBlob(canvas);
   
-  // For HEIC and AVIF, fallback smoothly using high-quality JPEG/PNG data without crashing WASM
-  if (format === "heic" || format === "avif") {
-    return canvasToBlob(canvas, "image/jpeg", 0.95);
-  }
+  if (format === "avif") return encodeCanvasWithWasm(canvas, "image/avif", 0.7);
+  if (format === "heic") return encodeCanvasWithWasm(canvas, "image/heic", 0.8);
 
   throw new Error(`Unsupported output format: ${format}`);
 }
@@ -224,7 +238,10 @@ export default function PdfToImage({ format }: Props) {
   const outputLabel = format.toUpperCase();
 
   function revokePages(items = pages) {
-    items.forEach((page) => URL.revokeObjectURL(page.url));
+    items.forEach((page) => {
+      URL.revokeObjectURL(page.url);
+      if (page.previewUrl) URL.revokeObjectURL(page.previewUrl);
+    });
   }
 
   function clearResults() {
@@ -288,6 +305,8 @@ export default function PdfToImage({ format }: Props) {
     updateProgressUI(1, "Loading PDF file…");
     await flushUI();
 
+    const needsPreviewImage = format === "svg" || format === "eps" || format === "heic" || format === "avif";
+
     try {
       const data = await file.arrayBuffer();
       const pdf = await getDocument({ data }).promise;
@@ -341,6 +360,7 @@ export default function PdfToImage({ format }: Props) {
           displayPages.push({
             n: pageNumber,
             url: URL.createObjectURL(blob),
+            previewUrl: needsPreviewImage ? await makePreviewUrl(canvas) : undefined,
             blob,
             width: canvas.width,
             height: canvas.height,
@@ -450,7 +470,11 @@ export default function PdfToImage({ format }: Props) {
               <div className="fileList pdfSelectedFileList">
                 <div className="fileRow pdfSelectedFile">
                   <div className="fileMeta">
-                    <div className="pdfFileIcon">PDF</div>
+                    <FilePreview
+                      file={file}
+                      alt={`First page of ${file.name}`}
+                      style={{ width: 56, height: 72, flex: "none", objectFit: "cover", borderRadius: 8, border: "1px solid var(--border)" }}
+                    />
                     <div style={{ minWidth: 0 }}>
                       <div className="fileName" title={file.name}>{file.name}</div>
                       <div className="fileSize">{formatBytes(file.size)} · Ready to convert</div>
@@ -588,12 +612,12 @@ export default function PdfToImage({ format }: Props) {
                 <article className="card pdfResultCard" key={page.n}>
                   <div className="pdfResultPreviewWrap">
                     <span className="pdfResultPageBadge">Page {page.n}</span>
-                    {format === "svg" || format === "eps" || format === "heic" || format === "avif" ? (
+                    {(format === "svg" || format === "eps" || format === "heic" || format === "avif") && !page.previewUrl ? (
                       <div className="pdfResultImage" style={{ display: "grid", placeItems: "center", minHeight: 260, background: "#eef6ff" }}>
                         <span style={{ fontWeight: 900 }}>{outputLabel}</span>
                       </div>
                     ) : (
-                      <img src={page.url} alt={`Converted PDF page ${page.n}`} className="pdfResultImage" loading="lazy" />
+                      <img src={page.previewUrl || page.url} alt={`Converted PDF page ${page.n}`} className="pdfResultImage" loading="lazy" />
                     )}
                   </div>
 

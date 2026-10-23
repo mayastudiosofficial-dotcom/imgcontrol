@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import RecentTools from "@/components/RecentTools";
 
 const tools = [
   ["/image-compressor", "🗜️", "Image Compressor", "Quality and target-size compression."],
@@ -184,6 +185,8 @@ export default function Home() {
               <p>Preview results and download one or all files.</p>
             </div>
           </div>
+
+          <RecentTools heading="Pick up where you left off" />
         </div>
       </section>
     </>

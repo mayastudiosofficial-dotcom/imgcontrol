@@ -4,6 +4,22 @@ import Link from "next/link";
 import "./globals.css";
 import ThemeToggle from "@/components/ThemeToggle";
 
+const siteJsonLd = [
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: "ImgControl",
+    url: "https://imgcontrol.com",
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: "ImgControl",
+    url: "https://imgcontrol.com",
+    logo: "https://imgcontrol.com/icon.png",
+  },
+];
+
 export const metadata = {
   metadataBase: new URL("https://imgcontrol.com"),
 
@@ -42,6 +58,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(siteJsonLd) }}
+        />
         {/* =================================
             HEADER
         ================================= */}

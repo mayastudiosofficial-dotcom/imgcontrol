@@ -1,9 +1,10 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import ArticleJsonLd from "@/components/ArticleJsonLd";
 
 export const metadata: Metadata = {
   title:
-    "How to Convert RAW to JPG Without Losing Important Details | ImgControl",
+    "How to Convert RAW to JPG Without Losing Important Details",
   description:
     "Learn how to convert RAW camera photos to JPG while preserving important details, resolution and image quality for websites, sharing, printing and everyday use.",
   alternates: {
@@ -620,6 +621,7 @@ export default function Page() {
           </article>
         </div>
       </section>
+    <ArticleJsonLd slug="raw-to-jpg-without-losing-details" />
     </main>
   );
 }

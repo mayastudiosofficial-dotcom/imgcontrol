@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import ImageToPdf from "@/components/ImageToPdf";
+import ToolSeoContent from "@/components/ToolSeoContent";
 
 export const metadata: Metadata = {
-  title: "Image to PDF Converter Online Free | ImgControl",
+  title: "Image to PDF Converter Online Free",
   description:
     "Convert JPG, PNG, WebP and other supported images to PDF online for free. Combine multiple images into a single PDF with optional output-size controls.",
   alternates: {
@@ -865,6 +866,7 @@ export default function Page() {
           </article>
         </div>
       </section>
+    <ToolSeoContent slug="image-to-pdf" />
     </>
   );
 }

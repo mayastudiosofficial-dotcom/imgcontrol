@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import OptimizerClient from "@/components/OptimizerClient";
+import ToolSeoContent from "@/components/ToolSeoContent";
 
 export const metadata: Metadata = {
-  title: "Image Converter Online – JPG, PNG, WebP, AVIF | ImgControl",
+  title: "Image Converter Online – JPG, PNG, WebP, AVIF",
   description:
     "Convert JPG, PNG, WebP and AVIF images online for free. Quickly change image formats in your browser with ImgControl. Fast, simple and privacy-focused.",
   alternates: {
@@ -40,6 +41,7 @@ export default function Page() {
       <section className="section" style={{ paddingTop: 18 }}>
         <OptimizerClient mode="convert" />
       </section>
+    <ToolSeoContent slug="image-converter" />
     </>
   );
 }
