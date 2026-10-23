@@ -44,9 +44,13 @@ export default function Page() {
       <main className="mx-auto w-full max-w-5xl px-4 pb-16 pt-10 sm:px-6 lg:px-8">
         <article className="space-y-12 text-slate-700">
           <section>
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+            <div
+              role="heading"
+              aria-level={2}
+              style={{ display: "block", fontSize: "2em", fontWeight: 700, margin: "0.67em 0" }}
+            >
               HEIC to PNG Image Converter
-            </h1>
+            </div>
 
             <p className="mt-4 text-base leading-7 sm:text-lg">
               Convert HEIC images to PNG with ImgControl, a dedicated HEIC to

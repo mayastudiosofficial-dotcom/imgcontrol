@@ -37,3 +37,16 @@ npm start
 - Target-size compression is a maximum/approximate target, not an exact-byte guarantee.
 - Target-size on Image→PDF reports when the generated PDF exceeds the selected target; exact compression below arbitrary targets requires iterative image re-encoding/downsampling and is not universally possible without quality loss.
 - Review Privacy Policy, Terms, contact form, analytics and advertising configuration before launch.
+
+## Tests
+
+The converters and SEO basics are checked in a real Chrome. Each tool converts a real file and the
+downloaded bytes are checked by file signature, so a tool that saves the wrong format fails.
+
+```bash
+npm run build
+npx next start -p 3100     # keep running
+npm run test:tools         # in another terminal, needs Chrome or Edge installed
+```
+
+Set `BASE_URL` to test another address and `CHROME_PATH` if Chrome is in a custom location.

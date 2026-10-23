@@ -3,6 +3,7 @@
 
 import { useRef, useState } from "react";
 import { encodeCanvasWithWasm, normalizeInputFile } from "@/lib/codecs";
+import NextSteps from "@/components/NextSteps";
 import JSZip from "jszip";
 
 type ToolMode = "compress" | "convert" | "resize" | "optimize";
@@ -1682,6 +1683,8 @@ export default function OptimizerClient({
               )}
 
             </div>
+
+            <NextSteps outputLabel={format.replace("image/","").replace("jpeg","jpg")} />
 
           </div>
         )}

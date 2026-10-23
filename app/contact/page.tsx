@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Contact ImgControl | Get in Touch",
+  title: { absolute: "Contact ImgControl | Get in Touch" },
   description:
     "Contact ImgControl for questions, feedback, technical issues, suggestions or general inquiries about our image and PDF tools.",
   alternates: {

@@ -16,7 +16,7 @@ import image11 from "./11-heic-to-jpg-without-losing-quality.png";
 import image12 from "./12-raw-to-jpg-without-losing-details.png";
 
 export const metadata: Metadata = {
-  title: "ImgControl Blog – Image & PDF Guides, Tips and Tutorials",
+  title: { absolute: "ImgControl Blog – Image & PDF Guides, Tips and Tutorials" },
   description:
     "Learn practical image and PDF tips with ImgControl guides covering image compression, JPG, PNG, WebP, AVIF, PDF conversion, resizing, optimization, HEIC, RAW and more.",
   alternates: {

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "About ImgControl – Online Image & PDF Tools",
+  title: { absolute: "About ImgControl – Online Image & PDF Tools" },
   description:
     "Learn about ImgControl, a modern online toolbox for image compression, conversion, resizing, cropping, optimization, and PDF image conversion.",
   alternates: {

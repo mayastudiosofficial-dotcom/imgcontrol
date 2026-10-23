@@ -1,4 +1,5 @@
 import Link from "next/link";
+import RecentTools from "@/components/RecentTools";
 import {
   ARTICLES,
   SITE_URL,
@@ -99,6 +100,7 @@ export default function ToolSeoContent({ slug }: { slug: string }) {
           <div className="jpgPngSeoWrap">
             <div className="card jpgPngSeoCard">
               <RelatedLinks slugs={related} />
+              <RecentTools current={slug} />
             </div>
           </div>
         </section>
@@ -136,6 +138,7 @@ export default function ToolSeoContent({ slug }: { slug: string }) {
             </div>
 
             <RelatedLinks slugs={content.related} articles={content.articles} />
+            <RecentTools current={slug} />
           </div>
         </div>
       </section>

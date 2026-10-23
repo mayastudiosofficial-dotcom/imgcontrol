@@ -2,6 +2,7 @@
 
 import JSZip from "jszip";
 import { encodeCanvasWithWasm, needsWasmEncoder, normalizeInputFile } from "@/lib/codecs";
+import NextSteps from "@/components/NextSteps";
 import {
   ChangeEvent,
   DragEvent,
@@ -1071,7 +1072,7 @@ export function FixedConverterClient({
                             </div>
 
                             <div>
-                              PNG:{" "}
+                              {outputLabel}:{" "}
                               {formatBytes(
                                 item.outputSize
                               )}
@@ -1128,6 +1129,8 @@ export function FixedConverterClient({
               )}
 
             </div>
+
+            <NextSteps outputLabel={outputLabel} />
 
           </div>
         )}

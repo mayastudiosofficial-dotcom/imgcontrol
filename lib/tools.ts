@@ -330,6 +330,7 @@ const UTILITIES: Record<string, ToolContent> = {
     intro: [
       "The ImgControl Image Cropper lets you draw a crop box over your picture and see the resulting dimensions as you work. It is a quick way to remove unwanted edges, focus on a subject or prepare a picture for a specific frame.",
       "The crop is done in your browser, so your original never leaves your device.",
+      "Typical jobs include trimming empty borders from a screenshot, framing a portrait for a profile picture, cutting a product out of a busy background shot, or preparing a banner image to the proportions a website asks for.",
     ],
     stepsTitle: "How to crop an image",
     steps:
@@ -339,11 +340,14 @@ const UTILITIES: Record<string, ToolContent> = {
       "Crop first and resize afterwards, so you do not throw away detail you may still need.",
       "Leave a little breathing room around the subject; tight crops are hard to reuse for other layouts.",
       "If a platform needs an exact size, crop to the right proportions and then use the Image Resizer.",
+      "Cropping does not shrink the file in proportion to the area you remove for every format, so run the result through the Image Compressor when the final file size matters.",
     ],
     faqs: [
       { q: "Do I see the dimensions while cropping?", a: "Yes. The crop area shows its dimensions as you adjust it." },
       { q: "Is the original file changed?", a: "No. Your original stays untouched on your device; you download a new cropped file." },
       { q: "Are my pictures uploaded?", a: "No. Cropping runs in your browser." },
+      { q: "Which formats can I crop?", a: "Common image formats such as JPG, PNG, WebP and AVIF work, and HEIC photos from an iPhone are converted in your browser first so they can be cropped too." },
+      { q: "Can I crop to a specific shape or ratio?", a: "You choose the area with the crop box. For an exact pixel size, crop to the right proportions first and then resize the result." },
     ],
     related: ["image-resizer", "image-compressor", "image-optimizer", "png-to-jpg"],
     articles: ["resize-images-before-publishing"],
