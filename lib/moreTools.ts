@@ -193,15 +193,18 @@ const PDF_TOOLS: Record<PdfToolSlug, ToolContent> = {
     ],
     stepsTitle: "How to compress a PDF",
     steps:
-      "Add your PDF, choose a level (Light, Balanced or Strong) and press Compress PDF. The tool shows the old and new size and a preview of the pages. If the result is not smaller, you keep your original.",
+      "Add your PDF, then choose how to compress it. Pick a quality level (Light, Balanced or Strong), or choose Target size and select a limit such as 200 KB or 1 MB, or type your own number in KB or MB. Press Compress PDF, check the preview and the new size, and download. If the result is not smaller, you keep your original.",
     extraTitle: "What to know before you compress",
     extra: [
       "Because pages become pictures, the text in the compressed file can no longer be selected or searched. Keep your original if you need that.",
       "Scanned documents and files full of photographs shrink the most. PDFs that are mostly text can come out larger, and in that case the tool tells you so.",
       "Strong gives the smallest file with visible softness; Light keeps pages sharper with a smaller saving.",
+      "When you choose a target size, the tool tries the sharpest setting first and only softens the pages as far as it has to, so you get the best-looking file that fits your limit.",
     ],
     faqs: [
       { q: "How can I reduce the size of a PDF?", a: "Add it to the tool, pick a level and press Compress PDF. Scanned PDFs often become several times smaller." },
+      { q: "Can I make a PDF a specific size, like 200 KB?", a: "Yes. Choose Target size, select 100 KB, 200 KB, 500 KB, 1 MB, 2 MB or 5 MB, or pick Custom and type your own size in KB or MB. The tool aims for the sharpest file at or under that size." },
+      { q: "What if the PDF cannot reach the size I typed?", a: "Then the tool gives you the smallest file it could make and tells you its size, so you can decide whether to use it or try a larger limit. Very small limits on a PDF with many pages are usually not possible." },
       { q: "Can I still select text after compressing?", a: "No. The pages are saved as pictures, so text is no longer selectable. Keep the original if you need searchable text." },
       { q: "Why did my PDF get bigger?", a: "A PDF made of real text and vector graphics can be smaller than pictures of its pages. The tool then keeps your original instead of a bigger file." },
       { q: "Is my PDF uploaded?", a: "No. The compression runs in your browser." },

@@ -1131,6 +1131,96 @@ async function runNewTools() {
     }
   });
 
+  /* Compress to a chosen size */
+  expect(scanPdf.length > 900 * 1024, `the scanned test PDF is only ${Math.round(scanPdf.length / 1024)} KB`);
+
+  async function compressToTarget({ preset, custom, unit }) {
+    const page = await openTool("compress-pdf");
+    await addPdfs(page, [{ name: "scan.pdf", buffer: scanPdf }]);
+    await page.locator("#pdf-compress-by").selectOption("size");
+    await page.locator("#pdf-size-preset").selectOption(preset);
+    if (custom !== undefined) {
+      await page.locator("#pdf-size-custom").fill(String(custom));
+      if (unit) await page.locator("#pdf-size-unit").selectOption(unit);
+    }
+    await page.getByRole("button", { name: "Compress PDF" }).click();
+    return page;
+  }
+
+  await test("compress-pdf: the 500 KB preset gives a PDF of 500 KB or less", async () => {
+    const page = await compressToTarget({ preset: "500" });
+    try {
+      await page.getByText("Your PDF is ready").waitFor({ timeout: 120000 });
+      const { bytes } = await downloadResult(page, /Download PDF/);
+      expect(bytes.length <= 500 * 1024, `result is ${Math.round(bytes.length / 1024)} KB`);
+      const pages = await pdfPages(bytes);
+      expect(pages.length === 2 && pages[0].w === 600 && pages[0].h === 800, `wrong pages: ${JSON.stringify(pages)}`);
+    } finally {
+      await page.context().close();
+    }
+  });
+
+  await test("compress-pdf: a custom size in KB (150) is reached", async () => {
+    const page = await compressToTarget({ preset: "custom", custom: 150, unit: "KB" });
+    try {
+      await page.getByText("Your PDF is ready").waitFor({ timeout: 120000 });
+      const { bytes } = await downloadResult(page, /Download PDF/);
+      expect(bytes.length <= 150 * 1024, `result is ${Math.round(bytes.length / 1024)} KB`);
+    } finally {
+      await page.context().close();
+    }
+  });
+
+  await test("compress-pdf: a custom size in MB (0.3) is understood as 307 KB", async () => {
+    const page = await compressToTarget({ preset: "custom", custom: 0.3, unit: "MB" });
+    try {
+      await page.getByText("Your PDF is ready").waitFor({ timeout: 120000 });
+      const { bytes } = await downloadResult(page, /Download PDF/);
+      expect(bytes.length <= 0.3 * 1024 * 1024, `result is ${Math.round(bytes.length / 1024)} KB`);
+    } finally {
+      await page.context().close();
+    }
+  });
+
+  await test("compress-pdf: a size that cannot be reached returns the smallest file and says so", async () => {
+    // 5 KB is the smallest size the tool accepts; two noisy pages cannot fit in it.
+    const page = await compressToTarget({ preset: "custom", custom: 5, unit: "KB" });
+    try {
+      await page.getByText(/smallest the tool could make/i).waitFor({ timeout: 120000 });
+      const { bytes } = await downloadResult(page, /Download PDF/);
+      expect(bytes.length < scanPdf.length, "the smallest file is not smaller than the original");
+    } finally {
+      await page.context().close();
+    }
+  });
+
+  await test("compress-pdf: a PDF that already fits the size is left alone", async () => {
+    const page = await openTool("compress-pdf");
+    try {
+      await addPdfs(page, [{ name: "small.pdf", buffer: pdfA }]);
+      await page.locator("#pdf-compress-by").selectOption("size");
+      await page.locator("#pdf-size-preset").selectOption("100");
+      await page.getByRole("button", { name: "Compress PDF" }).click();
+      await page.getByText(/already .* fits within 100\.00 KB/i).waitFor({ timeout: 30000 });
+    } finally {
+      await page.context().close();
+    }
+  });
+
+  await test("compress-pdf: an empty custom size is explained", async () => {
+    const page = await openTool("compress-pdf");
+    try {
+      await addPdfs(page, [{ name: "scan.pdf", buffer: scanPdf }]);
+      await page.locator("#pdf-compress-by").selectOption("size");
+      await page.locator("#pdf-size-preset").selectOption("custom");
+      await page.locator("#pdf-size-custom").fill("");
+      await page.getByRole("button", { name: "Compress PDF" }).click();
+      await page.getByText(/Type the size you want/).waitFor({ timeout: 5000 });
+    } finally {
+      await page.context().close();
+    }
+  });
+
   /* PDF to text */
   await test("pdf-to-text: the words of the PDF come out", async () => {
     const page = await openTool("pdf-to-text");

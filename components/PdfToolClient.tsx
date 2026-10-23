@@ -9,6 +9,7 @@ import { creep } from "@/lib/progress";
 import { loadPdfjs } from "@/lib/pdfjs";
 import {
   compressPdf,
+  compressToSize,
   countPages,
   deletePages,
   extractPages,
@@ -23,12 +24,23 @@ import {
 type Item = { id: string; file: File; pages: number };
 
 type Result =
-  | { kind: "pdf"; blob: Blob; name: string; before: number; pages: number }
+  | { kind: "pdf"; blob: Blob; name: string; before: number; pages: number; note?: string }
   | { kind: "zip"; blob: Blob; name: string; count: number }
   | { kind: "text"; text: string; name: string; pages: number; empty: number }
-  | { kind: "nogain"; before: number; after: number };
+  | { kind: "nogain"; before: number; after: number }
+  | { kind: "small"; before: number; target: number };
 
 const MAX_MERGE = 30;
+
+const SIZE_PRESETS: [string, string][] = [
+  ["100", "100 KB"],
+  ["200", "200 KB"],
+  ["500", "500 KB"],
+  ["1024", "1 MB"],
+  ["2048", "2 MB"],
+  ["5120", "5 MB"],
+  ["custom", "Custom size…"],
+];
 
 const COPY: Record<PdfToolSlug, { drop: string; hint: string; run: string }> = {
   "merge-pdf": { drop: "Drop PDF files here or tap to browse", hint: "Add two or more PDFs, up to 30 files.", run: "Merge PDF" },
@@ -96,6 +108,10 @@ export default function PdfToolClient({ tool }: { tool: PdfToolSlug }) {
   const [splitMode, setSplitMode] = useState<"extract" | "every">("extract");
   const [angle, setAngle] = useState(90);
   const [level, setLevel] = useState<CompressLevel>("balanced");
+  const [compressBy, setCompressBy] = useState<"level" | "size">("level");
+  const [sizePreset, setSizePreset] = useState("500");
+  const [customSize, setCustomSize] = useState("300");
+  const [customUnit, setCustomUnit] = useState<"KB" | "MB">("KB");
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState("");
@@ -164,6 +180,19 @@ export default function PdfToolClient({ tool }: { tool: PdfToolSlug }) {
     setItems((current) => current.filter((_, i) => i !== index));
   }
 
+  function wantedBytes(): number {
+    if (sizePreset !== "custom") return Number(sizePreset) * 1024;
+
+    const value = Number(customSize);
+    if (!Number.isFinite(value) || value <= 0) {
+      throw new Error("Type the size you want, for example 300 KB.");
+    }
+
+    const bytes = value * (customUnit === "MB" ? 1024 * 1024 : 1024);
+    if (bytes < 5 * 1024) throw new Error("That size is too small for a PDF. Try 10 KB or more.");
+    return bytes;
+  }
+
   async function run() {
     if (busy) return;
 
@@ -212,12 +241,33 @@ export default function PdfToolClient({ tool }: { tool: PdfToolSlug }) {
         const out = await deletePages(await bytes(first.file), pages);
         setResult({ kind: "pdf", blob: toBlob(out), name: `${baseName(first.file.name)}-edited.pdf`, before: first.file.size, pages: first.pages - pages.length });
       } else if (tool === "compress-pdf") {
-        stop();
-        const out = await compressPdf(first.file, level, report);
-        if (out.length >= first.file.size) {
-          setResult({ kind: "nogain", before: first.file.size, after: out.length });
+        if (compressBy === "size") {
+          const target = wantedBytes();
+          stop();
+          const sized = await compressToSize(first.file, target, report);
+
+          if (sized.alreadySmall) {
+            setResult({ kind: "small", before: first.file.size, target });
+          } else {
+            setResult({
+              kind: "pdf",
+              blob: toBlob(sized.bytes),
+              name: `${baseName(first.file.name)}-compressed.pdf`,
+              before: first.file.size,
+              pages: first.pages,
+              note: sized.reached
+                ? undefined
+                : `This is the smallest the tool could make: ${fmt(sized.bytes.length)}. A PDF with these pages cannot get under ${fmt(target)} without becoming unreadable. Try a larger size.`,
+            });
+          }
         } else {
-          setResult({ kind: "pdf", blob: toBlob(out), name: `${baseName(first.file.name)}-compressed.pdf`, before: first.file.size, pages: first.pages });
+          stop();
+          const out = await compressPdf(first.file, level, report);
+          if (out.length >= first.file.size) {
+            setResult({ kind: "nogain", before: first.file.size, after: out.length });
+          } else {
+            setResult({ kind: "pdf", blob: toBlob(out), name: `${baseName(first.file.name)}-compressed.pdf`, before: first.file.size, pages: first.pages });
+          }
         }
       } else {
         stop();
@@ -354,14 +404,67 @@ export default function PdfToolClient({ tool }: { tool: PdfToolSlug }) {
               )}
 
               {tool === "compress-pdf" && (
-                <div className="field">
-                  <label htmlFor="pdf-level">Compression</label>
-                  <select id="pdf-level" value={level} onChange={(event) => setLevel(event.target.value as CompressLevel)}>
-                    <option value="light">Light (sharper pages, smaller saving)</option>
-                    <option value="balanced">Balanced (recommended)</option>
-                    <option value="strong">Strong (smallest file, softer pages)</option>
-                  </select>
-                </div>
+                <>
+                  <div className="field">
+                    <label htmlFor="pdf-compress-by">Compress by</label>
+                    <select id="pdf-compress-by" value={compressBy} onChange={(event) => setCompressBy(event.target.value as "level" | "size")}>
+                      <option value="level">Quality level</option>
+                      <option value="size">Target size (KB / MB)</option>
+                    </select>
+                  </div>
+
+                  {compressBy === "level" ? (
+                    <div className="field">
+                      <label htmlFor="pdf-level">Compression</label>
+                      <select id="pdf-level" value={level} onChange={(event) => setLevel(event.target.value as CompressLevel)}>
+                        <option value="light">Light (sharper pages, smaller saving)</option>
+                        <option value="balanced">Balanced (recommended)</option>
+                        <option value="strong">Strong (smallest file, softer pages)</option>
+                      </select>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="field">
+                        <label htmlFor="pdf-size-preset">Make it at most</label>
+                        <select id="pdf-size-preset" value={sizePreset} onChange={(event) => setSizePreset(event.target.value)}>
+                          {SIZE_PRESETS.map(([value, label]) => (
+                            <option key={value} value={value}>
+                              {label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {sizePreset === "custom" && (
+                        <div className="field">
+                          <label htmlFor="pdf-size-custom">Your size</label>
+                          <div style={{ display: "flex", gap: 8 }}>
+                            <input
+                              id="pdf-size-custom"
+                              type="number"
+                              min="1"
+                              step="any"
+                              inputMode="decimal"
+                              value={customSize}
+                              onChange={(event) => setCustomSize(event.target.value)}
+                              style={{ flex: "1 1 0", width: "auto", minWidth: 0 }}
+                            />
+                            <select
+                              id="pdf-size-unit"
+                              aria-label="Unit"
+                              value={customUnit}
+                              onChange={(event) => setCustomUnit(event.target.value as "KB" | "MB")}
+                              style={{ flex: "none", width: 96 }}
+                            >
+                              <option value="KB">KB</option>
+                              <option value="MB">MB</option>
+                            </select>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </>
               )}
 
               {needsRanges && (
@@ -444,7 +547,19 @@ export default function PdfToolClient({ tool }: { tool: PdfToolSlug }) {
               </div>
             </div>
 
+            {result.note && (
+              <div className="notice" role="status" style={{ marginTop: 12 }}>
+                {result.note}
+              </div>
+            )}
+
             <PdfPreview blob={result.blob} />
+          </div>
+        )}
+
+        {result?.kind === "small" && (
+          <div className="notice" role="status">
+            Your PDF is already {fmt(result.before)}, which fits within {fmt(result.target)}. Nothing was changed, so the text stays selectable.
           </div>
         )}
 

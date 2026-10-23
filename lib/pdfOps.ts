@@ -139,65 +139,144 @@ export async function deletePages(bytes: Uint8Array, pages: number[]): Promise<U
 
 export type CompressLevel = "light" | "balanced" | "strong";
 
-const LEVELS: Record<CompressLevel, { scale: number; quality: number }> = {
-  light: { scale: 1.6, quality: 0.78 },
-  balanced: { scale: 1.25, quality: 0.62 },
-  strong: { scale: 1, quality: 0.45 },
-};
-
 /**
- * Draws every page as a JPEG picture and builds a new PDF from the pictures.
- * Text in the result is no longer selectable; the page says so.
+ * From sharp and large to soft and small. A level, or a target size, picks a step:
+ * how big each page is drawn (scale) and how hard its JPEG is squeezed (quality).
  */
-export async function compressPdf(file: File, level: CompressLevel, onProgress?: Progress): Promise<Uint8Array> {
-  const { getDocument } = await loadPdfjs();
-  const { scale, quality } = LEVELS[level];
+const RUNGS: { scale: number; quality: number }[] = [
+  { scale: 1.6, quality: 0.78 },
+  { scale: 1.25, quality: 0.62 },
+  { scale: 1.0, quality: 0.45 },
+  { scale: 0.8, quality: 0.4 },
+  { scale: 0.65, quality: 0.35 },
+  { scale: 0.5, quality: 0.3 },
+  { scale: 0.4, quality: 0.25 },
+];
 
-  let pdf;
+const LEVEL_RUNG: Record<CompressLevel, number> = { light: 0, balanced: 1, strong: 2 };
+
+type PdfjsDocument = Awaited<ReturnType<Awaited<ReturnType<typeof loadPdfjs>>["getDocument"]>["promise"]>;
+
+async function openWithPdfjs(file: File): Promise<PdfjsDocument> {
+  const { getDocument } = await loadPdfjs();
+
   try {
-    pdf = await getDocument({ data: await file.arrayBuffer() }).promise;
+    return await getDocument({ data: await file.arrayBuffer() }).promise;
   } catch (error) {
     throw friendly(error);
   }
+}
 
+/** Draws every page as a JPEG picture and builds a new PDF from the pictures. */
+async function renderAsPictures(
+  pdf: PdfjsDocument,
+  rung: { scale: number; quality: number },
+  onPage?: Progress,
+): Promise<Uint8Array> {
   const out = await PDFDocument.create();
 
-  try {
-    for (let number = 1; number <= pdf.numPages; number += 1) {
-      const page = await pdf.getPage(number);
-      const base = page.getViewport({ scale: 1 });
+  for (let number = 1; number <= pdf.numPages; number += 1) {
+    const page = await pdf.getPage(number);
+    const base = page.getViewport({ scale: 1 });
 
-      // Very large pages are capped so one page cannot use up the browser's memory.
-      const safeScale = Math.min(scale, 4000 / Math.max(base.width, base.height));
-      const viewport = page.getViewport({ scale: safeScale });
+    // Very large pages are capped so one page cannot use up the browser's memory.
+    const safeScale = Math.min(rung.scale, 4000 / Math.max(base.width, base.height));
+    const viewport = page.getViewport({ scale: safeScale });
 
-      const canvas = document.createElement("canvas");
-      canvas.width = Math.max(1, Math.floor(viewport.width));
-      canvas.height = Math.max(1, Math.floor(viewport.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.floor(viewport.width));
+    canvas.height = Math.max(1, Math.floor(viewport.height));
 
-      const context = canvas.getContext("2d");
-      if (!context) throw new Error("Canvas is not available in this browser.");
-      context.fillStyle = "#ffffff";
-      context.fillRect(0, 0, canvas.width, canvas.height);
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("Canvas is not available in this browser.");
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, canvas.width, canvas.height);
 
-      await page.render({ canvasContext: context, viewport } as never).promise;
+    await page.render({ canvasContext: context, viewport } as never).promise;
 
-      const blob: Blob = await new Promise((resolve, reject) =>
-        canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("Could not draw a page."))), "image/jpeg", quality),
-      );
+    const blob: Blob = await new Promise((resolve, reject) =>
+      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("Could not draw a page."))), "image/jpeg", rung.quality),
+    );
 
-      const image = await out.embedJpg(new Uint8Array(await blob.arrayBuffer()));
-      const target = out.addPage([base.width, base.height]);
-      target.drawImage(image, { x: 0, y: 0, width: base.width, height: base.height });
+    const image = await out.embedJpg(new Uint8Array(await blob.arrayBuffer()));
+    const target = out.addPage([base.width, base.height]);
+    target.drawImage(image, { x: 0, y: 0, width: base.width, height: base.height });
 
-      page.cleanup();
-      onProgress?.(number / pdf.numPages);
-    }
-  } finally {
-    await pdf.destroy();
+    page.cleanup();
+    onPage?.(number / pdf.numPages);
   }
 
   return out.save();
+}
+
+/** Compress with a fixed level. Text in the result is no longer selectable; the page says so. */
+export async function compressPdf(file: File, level: CompressLevel, onProgress?: Progress): Promise<Uint8Array> {
+  const pdf = await openWithPdfjs(file);
+
+  try {
+    return await renderAsPictures(pdf, RUNGS[LEVEL_RUNG[level]], onProgress);
+  } finally {
+    await pdf.destroy();
+  }
+}
+
+export type SizeResult = {
+  bytes: Uint8Array;
+  /** The result is at or under the size that was asked for. */
+  reached: boolean;
+  /** The original already fits, so nothing was done. */
+  alreadySmall: boolean;
+};
+
+/**
+ * Looks for the sharpest version that still fits `targetBytes`. It starts sharp and moves
+ * to softer steps, guessing from the size it just got how far to jump, so a few tries are
+ * enough. If even the softest step is too big it returns that one and says it did not fit.
+ */
+export async function compressToSize(file: File, targetBytes: number, onProgress?: Progress): Promise<SizeResult> {
+  if (file.size <= targetBytes) {
+    return { bytes: new Uint8Array(0), reached: true, alreadySmall: true };
+  }
+
+  const pdf = await openWithPdfjs(file);
+  const MAX_TRIES = 7;
+  const weight = (index: number) => RUNGS[index].scale ** 2 * (0.2 + RUNGS[index].quality);
+
+  let tries = 0;
+  const attempt = async (index: number) => {
+    tries += 1;
+    return renderAsPictures(pdf, RUNGS[index], (fraction) =>
+      onProgress?.(Math.min(0.98, (tries - 1 + fraction) / Math.max(3, tries + 1))),
+    );
+  };
+
+  try {
+    let rung = 0;
+    let lastTooBig = -1;
+    let bytes = await attempt(rung);
+
+    while (bytes.length > targetBytes && rung < RUNGS.length - 1 && tries < MAX_TRIES) {
+      lastTooBig = rung;
+
+      let next = rung + 1;
+      while (next < RUNGS.length - 1 && (bytes.length * weight(next)) / weight(rung) > targetBytes * 0.95) {
+        next += 1;
+      }
+
+      rung = next;
+      bytes = await attempt(rung);
+    }
+
+    // The jump may have skipped a step that also fits and looks better.
+    if (bytes.length <= targetBytes && rung - lastTooBig > 1 && bytes.length < targetBytes * 0.6 && tries < MAX_TRIES) {
+      const sharper = await attempt(rung - 1);
+      if (sharper.length <= targetBytes) bytes = sharper;
+    }
+
+    return { bytes, reached: bytes.length <= targetBytes, alreadySmall: false };
+  } finally {
+    await pdf.destroy();
+  }
 }
 
 export type ExtractedText = { text: string; pages: number; pagesWithoutText: number };
