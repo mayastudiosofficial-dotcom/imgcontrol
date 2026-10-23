@@ -192,8 +192,7 @@ async function encodeSpecial(
   if (format === "gif") return makeGifBlob(canvas);
   
   if (format === "avif") return encodeCanvasWithWasm(canvas, "image/avif", 0.7);
-  // HEIC cannot be encoded in the browser reliably yet; keep the safe JPEG fallback.
-  if (format === "heic") return canvasToBlob(canvas, "image/jpeg", 0.95);
+  if (format === "heic") return encodeCanvasWithWasm(canvas, "image/heic", 0.8);
 
   throw new Error(`Unsupported output format: ${format}`);
 }

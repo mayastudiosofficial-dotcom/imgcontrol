@@ -189,8 +189,8 @@ const MIME = { jpg: "image/jpeg", png: "image/png", webp: "image/webp", avif: "i
 
 async function uploadAndConvert(page, key, buttonRegex) {
   await page.locator("input[type=file]").first().setInputFiles({
-    name: `sample.${key}`,
-    mimeType: MIME[key],
+    name: `sample.${key.replace(/\d+$/, "")}`,
+    mimeType: MIME[key.replace(/\d+$/, "")],
     buffer: fixtures[key],
   });
   await page.waitForTimeout(500);
@@ -211,11 +211,12 @@ async function convertTest(slug, from, to, buttonRegex, beforeClick) {
         const text = await page.locator("body").innerText();
         expect(!/^\s*PNG:\s*[\d.]+\s*(KB|MB|B)\b/m.test(text), "result card shows a wrong PNG label");
       }
-      if (to === "avif" && from === "jpg") {
-        // later tests use this real AVIF file as their input
-        const b64 = await page.evaluate(async () => {
+      const keep = to === "avif" && from === "jpg" ? "avif" : to === "heic" && from === "pdf" ? "heic2" : null;
+      if (keep) {
+        // later tests use this real file (made by the site itself) as their input
+        const b64 = await page.evaluate(async (kind) => {
           for (const b of window.__blobs) {
-            if ((await window.__sig(b)) === "avif") {
+            if ((await window.__sig(b)) === kind) {
               const u = new Uint8Array(await b.arrayBuffer());
               let s = "";
               u.forEach((v) => (s += String.fromCharCode(v)));
@@ -223,8 +224,8 @@ async function convertTest(slug, from, to, buttonRegex, beforeClick) {
             }
           }
           return "";
-        });
-        fixtures.avif = Buffer.from(b64, "base64");
+        }, to === "avif" ? "avif" : "heic");
+        fixtures[keep] = Buffer.from(b64, "base64");
       }
     } finally {
       await page.context().close();
@@ -334,8 +335,39 @@ async function runPdf() {
     return;
   }
 
-  for (const to of ["jpg", "png", "webp", "avif", "gif", "bmp", "svg", "eps"]) {
+  for (const to of ["jpg", "png", "webp", "avif", "heic", "gif", "bmp", "svg", "eps"]) {
     await convertTest(`pdf-to-${to}`, "pdf", to, new RegExp(`Convert to ${to}`, "i"));
+  }
+
+  await test("pdf-to-heic keeps the page responsive while encoding", async () => {
+    const page = await newPage();
+    try {
+      await page.goto(`${BASE}/pdf-to-heic`);
+      await page.evaluate(() => {
+        window.__maxGap = 0;
+        let last = performance.now();
+        setInterval(() => {
+          const now = performance.now();
+          window.__maxGap = Math.max(window.__maxGap, now - last);
+          last = now;
+        }, 50);
+      });
+      await uploadAndConvert(page, "pdf", /Convert to heic/i);
+      const res = await page.evaluate(() => window.__waitFor("heic", 60000));
+      expect(res.ok, "no real heic output");
+      const gap = await page.evaluate(() => window.__maxGap);
+      expect(gap < 1500, `page was blocked for ${Math.round(gap)} ms while encoding`);
+    } finally {
+      await page.context().close();
+    }
+  });
+
+  // The HEIC made by pdf-to-heic must be a valid HEIC that the site can read back.
+  if (fixtures.heic2) {
+    await convertTest("heic-to-png", "heic2", "png", /Convert to PNG/i);
+  } else {
+    results.push({ name: "pdf-to-heic round trip", ok: false, error: "no HEIC was produced" });
+    console.log("  FAIL  pdf-to-heic round trip\n        no HEIC was produced");
   }
 }
 
