@@ -150,8 +150,8 @@ export async function encodeCanvasWithWasm(
   return new Blob([out.buffer], { type: mime });
 }
 
-/** Decode HEIC (or AVIF when the browser cannot) into a PNG File the normal pipeline can read. */
-export async function decodeWithWasm(file: File, fmt: Fmt = "heic"): Promise<File> {
+/** Decode HEIC (or AVIF when the browser cannot) into a canvas holding the full-size pixels. */
+export async function decodeToCanvas(file: File, fmt: Fmt = "heic"): Promise<HTMLCanvasElement> {
   const buffer = await file.arrayBuffer();
   const out = await call({ op: "decode", fmt, buffer }, [buffer]);
 
@@ -162,11 +162,18 @@ export async function decodeWithWasm(file: File, fmt: Fmt = "heic"): Promise<Fil
   if (!context) throw new Error("Canvas is not available in this browser.");
   context.putImageData(new ImageData(new Uint8ClampedArray(out.buffer), canvas.width, canvas.height), 0, 0);
 
+  return canvas;
+}
+
+/** Decode HEIC (or AVIF when the browser cannot) into a PNG File the normal pipeline can read. */
+export async function decodeWithWasm(file: File, fmt: Fmt = "heic"): Promise<File> {
+  const canvas = await decodeToCanvas(file, fmt);
+
   const blob: Blob = await new Promise((resolve, reject) =>
     canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("Unable to read HEIC image."))), "image/png"),
   );
 
-  return new File([blob], file.name.replace(/\.[^.]+$/, "") + ".png", { type: "image/png" });
+  return new File([blob], file.name.replace(/.[^.]+$/, "") + ".png", { type: "image/png" });
 }
 
 /** HEIC files are decoded with WebAssembly; every other file is returned unchanged. */

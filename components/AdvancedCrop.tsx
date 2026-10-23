@@ -23,6 +23,7 @@ export default function AdvancedCrop() {
     h: 100,
   });
   const [ratio, setRatio] = useState("free");
+  const [preparing, setPreparing] = useState(false);
   const [outputWidth, setOutputWidth] = useState(0);
   const [outputHeight, setOutputHeight] = useState(0);
   const [result, setResult] = useState<Blob | null>(null);
@@ -87,10 +88,12 @@ export default function AdvancedCrop() {
 
     setResult(null);
     setError("");
+    setPreparing(true);
 
     normalizeInputFile(nextFile)
       .then((ready) => setFile(ready))
-      .catch(() => setError("This image could not be read."));
+      .catch(() => setError("This image could not be read."))
+      .finally(() => setPreparing(false));
   }
 
   function handleImageLoad(event: React.SyntheticEvent<HTMLImageElement>) {
@@ -961,6 +964,7 @@ export default function AdvancedCrop() {
               </div>
             </div>
 
+            {preparing && <div className="notice">Reading your photo, the preview will appear in a moment…</div>}
             {error && <div className="notice">{error}</div>}
 
             <div className="actions" style={{ justifyContent: "stretch", marginTop: 18 }}>

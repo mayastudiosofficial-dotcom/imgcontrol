@@ -4,6 +4,7 @@ import JSZip from "jszip";
 import { encodeCanvasWithWasm, isHeicFile, needsWasmEncoder, normalizeInputFile } from "@/lib/codecs";
 import { creep, nextFrame } from "@/lib/progress";
 import NextSteps from "@/components/NextSteps";
+import FilePreview from "@/components/FilePreview";
 import {
   ChangeEvent,
   DragEvent,
@@ -879,12 +880,10 @@ export function FixedConverterClient({
                       <div className="fileMeta">
 
                         <div className="thumbnailWrap">
-                          <img
-                            src={URL.createObjectURL(
-                              file
-                            )}
+                          <FilePreview
+                            file={file}
                             alt={file.name}
-                            className="selectedThumb"
+                            style={{ width: "100%", height: "100%", display: "block", objectFit: "cover" }}
                           />
                         </div>
 

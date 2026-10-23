@@ -704,6 +704,77 @@ async function runExtras() {
   }
 }
 
+/* ---------- preview right after selecting a file ---------- */
+
+async function runSelectionPreviews() {
+  console.log("\nPreview right after selecting a file (before converting)");
+
+  async function check(slug, key, ms = 20000) {
+    await test(`select ${key} on ${slug}: preview appears`, async () => {
+      const page = await newPage();
+      try {
+        await page.goto(`${BASE}/${slug}`);
+        await page.locator("input[type=file]").first().setInputFiles({
+          name: `sample.${key}`,
+          mimeType: MIME[key],
+          buffer: fixtures[key],
+        });
+        await page.waitForFunction(() => {
+          const el = document.querySelector("img.filePreview");
+          return el && el.complete && el.naturalWidth > 20;
+        }, null, { timeout: ms });
+      } finally {
+        await page.context().close();
+      }
+    });
+  }
+
+  for (const [from, to] of FIXED) await check(`${from}-to-${to}`, from);
+
+  for (const [slug, key] of [
+    ["image-converter", "png"], ["image-converter", "heic"], ["image-compressor", "jpg"], ["image-resizer", "webp"],
+    ["image-optimizer", "jpg"], ["image-to-pdf", "jpg"], ["image-to-pdf", "heic"],
+    ["jpg-to-pdf", "jpg"], ["png-to-pdf", "png"], ["webp-to-pdf", "webp"],
+  ]) {
+    await check(slug, key);
+  }
+
+  if (fixtures.pdf) {
+    for (const to of ["jpg", "png", "webp", "avif", "heic", "gif", "bmp", "svg", "eps"]) await check(`pdf-to-${to}`, "pdf");
+  }
+
+  await test("select heic on image-cropper: the photo appears", async () => {
+    const page = await newPage();
+    try {
+      await page.goto(`${BASE}/image-cropper`);
+      await page.locator("input[type=file]").first().setInputFiles({ name: "photo.heic", mimeType: "image/heic", buffer: fixtures.heic });
+      await page.waitForFunction(
+        () => [...document.images].some((i) => i.src.startsWith("blob:") && i.complete && i.naturalWidth > 100),
+        null,
+        { timeout: 20000 },
+      );
+    } finally {
+      await page.context().close();
+    }
+  });
+
+  if (process.env.RAW_SAMPLE && fs.existsSync(process.env.RAW_SAMPLE)) {
+    await test("select a RAW file on raw-to-jpg: preview appears", async () => {
+      const page = await newPage();
+      try {
+        await page.goto(`${BASE}/raw-to-jpg`);
+        await page.locator("input[type=file]").first().setInputFiles(process.env.RAW_SAMPLE);
+        await page.waitForFunction(() => {
+          const el = document.querySelector("img.rawFileThumb");
+          return el && el.complete && el.naturalWidth > 20;
+        }, null, { timeout: 120000 });
+      } finally {
+        await page.context().close();
+      }
+    });
+  }
+}
+
 /* ---------- console errors and phone layout on every page ---------- */
 
 async function runPageHealth() {
@@ -750,6 +821,7 @@ async function main() {
   await runConverters();
   await runPdf();
   await runExtras();
+  await runSelectionPreviews();
   await runSeo();
   await runPageHealth();
   await browser.close();

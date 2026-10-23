@@ -8,6 +8,7 @@ import {
 } from "pdfjs-dist/legacy/build/pdf.mjs";
 // @ts-ignore
 import { GIFEncoder, quantize, applyPalette } from "gifenc";
+import FilePreview from "@/components/FilePreview";
 import { encodeCanvasWithWasm } from "@/lib/codecs";
 
 if (typeof window !== "undefined") {
@@ -469,7 +470,11 @@ export default function PdfToImage({ format }: Props) {
               <div className="fileList pdfSelectedFileList">
                 <div className="fileRow pdfSelectedFile">
                   <div className="fileMeta">
-                    <div className="pdfFileIcon">PDF</div>
+                    <FilePreview
+                      file={file}
+                      alt={`First page of ${file.name}`}
+                      style={{ width: 56, height: 72, flex: "none", objectFit: "cover", borderRadius: 8, border: "1px solid var(--border)" }}
+                    />
                     <div style={{ minWidth: 0 }}>
                       <div className="fileName" title={file.name}>{file.name}</div>
                       <div className="fileSize">{formatBytes(file.size)} · Ready to convert</div>

@@ -5,6 +5,7 @@ import { useRef, useState } from "react";
 import { encodeCanvasWithWasm, normalizeInputFile } from "@/lib/codecs";
 import NextSteps from "@/components/NextSteps";
 import ResultThumb from "@/components/ResultThumb";
+import FilePreview from "@/components/FilePreview";
 import JSZip from "jszip";
 
 type ToolMode = "compress" | "convert" | "resize" | "optimize";
@@ -1399,11 +1400,6 @@ export default function OptimizerClient({
 
             {files.map(
               (file, index) => {
-                const previewUrl =
-                  URL.createObjectURL(
-                    file,
-                  );
-
                 return (
                   <div
                     className="fileRow"
@@ -1412,15 +1408,10 @@ export default function OptimizerClient({
 
                     <div className="fileMeta">
 
-                      <img
+                      <FilePreview
                         className="thumb"
-                        src={previewUrl}
+                        file={file}
                         alt={`Preview of ${file.name}`}
-                        onLoad={() =>
-                          URL.revokeObjectURL(
-                            previewUrl,
-                          )
-                        }
                       />
 
                       <div>
