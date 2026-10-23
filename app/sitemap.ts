@@ -15,27 +15,27 @@ const paths = [
   "image-resizer",
   "image-cropper",
   "image-optimizer",
+  "compress-image-to-20kb",
+  "compress-image-to-50kb",
+  "compress-image-to-100kb",
+  "compress-image-to-200kb",
 
   "image-to-pdf",
 
   "jpg-to-png",
   "jpg-to-webp",
-  "jpg-to-avif",
   "jpg-to-pdf",
 
   "png-to-jpg",
   "png-to-webp",
-  "png-to-avif",
   "png-to-pdf",
 
   "webp-to-jpg",
   "webp-to-png",
-  "webp-to-avif",
   "webp-to-pdf",
 
   "avif-to-jpg",
   "avif-to-png",
-  "avif-to-webp",
 
   "heic-to-jpg",
   "heic-to-png",
@@ -43,12 +43,12 @@ const paths = [
   "pdf-to-jpg",
   "pdf-to-png",
   "pdf-to-webp",
-  "pdf-to-gif",
-  "pdf-to-avif",
-  "pdf-to-heic",
-  "pdf-to-svg",
-  "pdf-to-bmp",
-  "pdf-to-eps",
+  "merge-pdf",
+  "split-pdf",
+  "rotate-pdf",
+  "compress-pdf",
+  "delete-pdf-pages",
+  "pdf-to-text",
 
   "raw-to-jpg",
 

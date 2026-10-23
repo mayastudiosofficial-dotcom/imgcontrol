@@ -637,8 +637,8 @@ export default function BlogPost() {
             <p>
               ImgControl provides dedicated conversion tools for supported
               modern image formats, including{" "}
-              <Link href="/jpg-to-webp">JPG to WebP</Link> and{" "}
-              <Link href="/jpg-to-avif">JPG to AVIF</Link>.
+              <Link href="/jpg-to-webp">JPG to WebP</Link> and the{" "}
+              <Link href="/image-converter">Image Converter</Link>, which can also save AVIF.
             </p>
 
             <h2>Tips for Choosing Between JPG and PNG</h2>
@@ -807,7 +807,7 @@ export default function BlogPost() {
               <Link href="/jpg-to-png">JPG to PNG</Link>,{" "}
               <Link href="/png-to-jpg">PNG to JPG</Link>,{" "}
               <Link href="/jpg-to-webp">JPG to WebP</Link>,{" "}
-              <Link href="/jpg-to-avif">JPG to AVIF</Link>, and other supported
+              the <Link href="/image-converter">Image Converter</Link>, and other supported
               image workflows.
             </p>
 

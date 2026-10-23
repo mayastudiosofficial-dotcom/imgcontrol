@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import RecentTools from "@/components/RecentTools";
+import { toolName } from "@/lib/tools";
 
 const tools = [
   ["/image-compressor", "🗜️", "Image Compressor", "Quality and target-size compression."],
@@ -23,15 +24,13 @@ const conversions = [
   "pdf-to-jpg",
   "pdf-to-png",
   "image-to-pdf",
-  "jpg-to-avif",
-  "png-to-avif",
+  "compress-image-to-100kb",
+  "merge-pdf",
   "heic-to-jpg",
 ];
 
 function titleFromSlug(slug: string) {
-  return slug
-    .replaceAll("-", " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase());
+  return toolName(slug);
 }
 
 export default function Home() {

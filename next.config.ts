@@ -17,6 +17,28 @@ const nextConfig: NextConfig = {
 
     return config;
   },
+  // Pages that were retired. Old links and bookmarks go to the closest working tool.
+  async redirects() {
+    const moved: [string, string][] = [
+      ["pdf-to-eps", "pdf-to-png"],
+      ["pdf-to-svg", "pdf-to-png"],
+      ["pdf-to-bmp", "pdf-to-png"],
+      ["pdf-to-gif", "pdf-to-png"],
+      ["pdf-to-heic", "pdf-to-jpg"],
+      ["pdf-to-avif", "pdf-to-webp"],
+      ["jpg-to-avif", "image-converter"],
+      ["png-to-avif", "image-converter"],
+      ["webp-to-avif", "image-converter"],
+      ["avif-to-webp", "image-converter"],
+    ];
+
+    return moved.map(([from, to]) => ({
+      source: `/${from}`,
+      destination: `/${to}`,
+      permanent: true,
+    }));
+  },
+
   async headers() {
     return [
       {

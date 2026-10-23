@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { toolName } from "@/lib/tools";
 
 export const metadata: Metadata = {
   title: "All Image & PDF Tools",
@@ -14,24 +15,24 @@ const imageTools = [
   "image-resizer",
   "image-cropper",
   "image-optimizer",
+  "compress-image-to-20kb",
+  "compress-image-to-50kb",
+  "compress-image-to-100kb",
+  "compress-image-to-200kb",
 ];
 
 const imageConversions = [
   "jpg-to-png",
   "jpg-to-webp",
-  "jpg-to-avif",
 
   "png-to-jpg",
   "png-to-webp",
-  "png-to-avif",
 
   "webp-to-jpg",
   "webp-to-png",
-  "webp-to-avif",
 
   "avif-to-jpg",
   "avif-to-png",
-  "avif-to-webp",
 
   "heic-to-jpg",
   "heic-to-png",
@@ -44,31 +45,27 @@ const pdfTools = [
   "pdf-to-jpg",
   "pdf-to-png",
   "pdf-to-webp",
-  "pdf-to-gif",
-  "pdf-to-avif",
-  "pdf-to-heic",
-  "pdf-to-svg",
-  "pdf-to-bmp",
-  "pdf-to-eps",
+  "merge-pdf",
+  "split-pdf",
+  "rotate-pdf",
+  "compress-pdf",
+  "delete-pdf-pages",
+  "pdf-to-text",
 ];
 
 function label(slug: string) {
   const special: Record<string, string> = {
     "jpg-to-png": "JPG to PNG",
     "jpg-to-webp": "JPG to WebP",
-    "jpg-to-avif": "JPG to AVIF",
 
     "png-to-jpg": "PNG to JPG",
     "png-to-webp": "PNG to WebP",
-    "png-to-avif": "PNG to AVIF",
 
     "webp-to-jpg": "WebP to JPG",
     "webp-to-png": "WebP to PNG",
-    "webp-to-avif": "WebP to AVIF",
 
     "avif-to-jpg": "AVIF to JPG",
     "avif-to-png": "AVIF to PNG",
-    "avif-to-webp": "AVIF to WebP",
 
     "heic-to-jpg": "HEIC to JPG",
     "heic-to-png": "HEIC to PNG",
@@ -79,20 +76,9 @@ function label(slug: string) {
     "pdf-to-jpg": "PDF to JPG",
     "pdf-to-png": "PDF to PNG",
     "pdf-to-webp": "PDF to WebP",
-    "pdf-to-gif": "PDF to GIF",
-    "pdf-to-avif": "PDF to AVIF",
-    "pdf-to-heic": "PDF to HEIC / HEIF",
-    "pdf-to-svg": "PDF to SVG",
-    "pdf-to-bmp": "PDF to BMP",
-    "pdf-to-eps": "PDF to EPS",
   };
 
-  return (
-    special[slug] ??
-    slug
-      .replaceAll("-", " ")
-      .replace(/\b\w/g, (c) => c.toUpperCase())
-  );
+  return special[slug] ?? toolName(slug);
 }
 
 function ToolCard({ slug }: { slug: string }) {

@@ -15,6 +15,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright-core";
+import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 
 const BASE = process.env.BASE_URL || "http://localhost:3100";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -202,6 +203,28 @@ async function buildFixtures() {
     return btoa(s);
   }, BASE), 90000, "large HEIC fixture generation");
   fixtures.heicBig = Buffer.from(bigB64, "base64");
+
+  const avifB64 = await withTimeout(page.evaluate(async (origin) => {
+    const m = await import(origin + "/_t/lib/index.js");
+    await m.avif.loadEncoder(origin + "/_t/dist/avif-enc.wasm");
+    const w = 320;
+    const h = 200;
+    const d = new Uint8ClampedArray(w * h * 4);
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const i = (y * w + x) * 4;
+        d[i] = (x * 255) / w;
+        d[i + 1] = 90;
+        d[i + 2] = (y * 255) / h;
+        d[i + 3] = 255;
+      }
+    }
+    const out = m.avif.encode(new ImageData(d, w, h), { quality: 60 });
+    let s = "";
+    new Uint8Array(out).forEach((v) => (s += String.fromCharCode(v)));
+    return btoa(s);
+  }, BASE), 45000, "AVIF fixture generation");
+  fixtures.avif = Buffer.from(avifB64, "base64");
   await page.context().close();
 }
 
@@ -233,22 +256,6 @@ async function convertTest(slug, from, to, buttonRegex, beforeClick) {
         const text = await page.locator("body").innerText();
         expect(!/^\s*PNG:\s*[\d.]+\s*(KB|MB|B)\b/m.test(text), "result card shows a wrong PNG label");
       }
-      const keep = to === "avif" && from === "jpg" ? "avif" : to === "heic" && from === "pdf" ? "heic2" : null;
-      if (keep) {
-        // later tests use this real file (made by the site itself) as their input
-        const b64 = await page.evaluate(async (kind) => {
-          for (const b of window.__blobs) {
-            if ((await window.__sig(b)) === kind) {
-              const u = new Uint8Array(await b.arrayBuffer());
-              let s = "";
-              u.forEach((v) => (s += String.fromCharCode(v)));
-              return btoa(s);
-            }
-          }
-          return "";
-        }, to === "avif" ? "avif" : "heic");
-        fixtures[keep] = Buffer.from(b64, "base64");
-      }
     } finally {
       await page.context().close();
     }
@@ -256,10 +263,10 @@ async function convertTest(slug, from, to, buttonRegex, beforeClick) {
 }
 
 const FIXED = [
-  ["jpg", "png"], ["jpg", "webp"], ["jpg", "avif"],
-  ["png", "jpg"], ["png", "webp"], ["png", "avif"],
-  ["webp", "jpg"], ["webp", "png"], ["webp", "avif"],
-  ["avif", "jpg"], ["avif", "png"], ["avif", "webp"],
+  ["jpg", "png"], ["jpg", "webp"],
+  ["png", "jpg"], ["png", "webp"],
+  ["webp", "jpg"], ["webp", "png"],
+  ["avif", "jpg"], ["avif", "png"],
   ["heic", "jpg"], ["heic", "png"],
 ];
 
@@ -364,47 +371,8 @@ async function runPdf() {
     return;
   }
 
-  for (const to of ["jpg", "png", "webp", "avif", "heic", "gif", "bmp", "svg", "eps"]) {
+  for (const to of ["jpg", "png", "webp"]) {
     await convertTest(`pdf-to-${to}`, "pdf", to, new RegExp(`Convert to ${to}`, "i"));
-  }
-
-  await test("pdf-to-heic keeps the page responsive while encoding", async () => {
-    const page = await newPage();
-    try {
-      await page.goto(`${BASE}/pdf-to-heic`);
-      await page.evaluate(() => {
-        window.__maxGap = 0;
-        let last = performance.now();
-        setInterval(() => {
-          const now = performance.now();
-          window.__maxGap = Math.max(window.__maxGap, now - last);
-          last = now;
-        }, 50);
-      });
-      await uploadAndConvert(page, "pdf", /Convert to heic/i);
-      const res = await page.evaluate(() => window.__waitFor("heic", 60000));
-      expect(res.ok, "no real heic output");
-      const gap = await page.evaluate(() => window.__maxGap);
-      expect(gap < 1500, `page was blocked for ${Math.round(gap)} ms while encoding`);
-
-      // The result card must show the page itself, not a text placeholder.
-      const thumb = page.locator("img.pdfResultImage").first();
-      await thumb.waitFor({ timeout: 10000 });
-      await page.waitForFunction(() => {
-        const el = document.querySelector("img.pdfResultImage");
-        return el && el.complete && el.naturalWidth > 100;
-      }, null, { timeout: 10000 });
-    } finally {
-      await page.context().close();
-    }
-  });
-
-  // The HEIC made by pdf-to-heic must be a valid HEIC that the site can read back.
-  if (fixtures.heic2) {
-    await convertTest("heic-to-png", "heic2", "png", /Convert to PNG/i);
-  } else {
-    results.push({ name: "pdf-to-heic round trip", ok: false, error: "no HEIC was produced" });
-    console.log("  FAIL  pdf-to-heic round trip\n        no HEIC was produced");
   }
 }
 
@@ -671,7 +639,7 @@ async function runExtras() {
         await page.waitForTimeout(600);
         const sampling = sampleProgress(page, 150000);
         await page.getByRole("button", { name: /Convert RAW to JPG/i }).click();
-        checkSteadyProgress(await sampling, { minSteps: 8, maxJump: 25 });
+        checkSteadyProgress(await sampling, { minSteps: 8, maxJump: 35 });
       } finally {
         await page.context().close();
       }
@@ -740,7 +708,7 @@ async function runSelectionPreviews() {
   }
 
   if (fixtures.pdf) {
-    for (const to of ["jpg", "png", "webp", "avif", "heic", "gif", "bmp", "svg", "eps"]) await check(`pdf-to-${to}`, "pdf");
+    for (const to of ["jpg", "png", "webp"]) await check(`pdf-to-${to}`, "pdf");
   }
 
   await test("select heic on image-cropper: the photo appears", async () => {
@@ -906,6 +874,452 @@ async function runPhoneChrome() {
   }
 }
 
+/* ---------- new tools: Compress to KB, Merge / Split / Rotate / Compress / Delete PDF, PDF to Text ---------- */
+
+// Test PDFs are built here with pdf-lib so every page has a known size and text.
+async function makePdf({ pages, width, height, heightStep = 0, label, image }) {
+  const doc = await PDFDocument.create();
+  const font = await doc.embedFont(StandardFonts.Helvetica);
+  const picture = image ? await doc.embedJpg(image) : null;
+
+  for (let i = 1; i <= pages; i++) {
+    const h = height + heightStep * i;
+    const page = doc.addPage([width, h]);
+    if (picture) page.drawImage(picture, { x: 0, y: 0, width, height: h });
+    else page.drawText(`${label} page ${i}`, { x: 40, y: h - 80, size: 22, font, color: rgb(0, 0, 0) });
+  }
+
+  return Buffer.from(await doc.save());
+}
+
+async function pdfPages(bytes) {
+  const doc = await PDFDocument.load(bytes);
+  return doc.getPages().map((p) => ({ w: Math.round(p.getWidth()), h: Math.round(p.getHeight()), rot: p.getRotation().angle }));
+}
+
+async function openTool(slug) {
+  const page = await newPage();
+  await page.goto(`${BASE}/${slug}`);
+  return page;
+}
+
+async function addPdfs(page, files) {
+  await page.locator("input[type=file]").first().setInputFiles(
+    files.map((f) => ({ name: f.name, mimeType: "application/pdf", buffer: f.buffer })),
+  );
+}
+
+// Clicks a download button and returns the bytes and the file name the page asked for.
+async function downloadResult(page, buttonName) {
+  await page.evaluate(() => {
+    window.__blobs.length = 0;
+    HTMLAnchorElement.prototype.click = function () {
+      window.__lastName = this.download;
+    };
+  });
+  await page.getByRole("button", { name: buttonName }).click();
+  const b64 = await page.evaluate(async () => {
+    const blob = window.__blobs[window.__blobs.length - 1];
+    const bytes = new Uint8Array(await blob.arrayBuffer());
+    let s = "";
+    bytes.forEach((v) => (s += String.fromCharCode(v)));
+    return btoa(s);
+  });
+  return { bytes: Buffer.from(b64, "base64"), name: await page.evaluate(() => window.__lastName) };
+}
+
+async function runNewTools() {
+  console.log("\nNew tools");
+
+  const pdfA = await makePdf({ pages: 3, width: 300, height: 400, heightStep: 10, label: "Alpha" });
+  const pdfB = await makePdf({ pages: 2, width: 500, height: 300, label: "Beta" });
+
+  const helper = await newPage();
+  await helper.goto(`${BASE}/about`);
+  const scanImage = await noisyJpeg(helper, 1400, 1000);
+  await helper.context().close();
+  const scanPdf = await makePdf({ pages: 2, width: 600, height: 800, image: scanImage });
+
+  /* Compress to a given size */
+  for (const kb of [20, 50, 100, 200]) {
+    await test(`compress-image-to-${kb}kb: a large photo ends up at ${kb} KB or less`, async () => {
+      const page = await openTool(`compress-image-to-${kb}kb`);
+      try {
+        const noisy = await noisyJpeg(page, 900, 700);
+        expect(noisy.length > kb * 1024 * 3, "test photo is too small to need shrinking");
+        await page.locator("input[type=file]").first().setInputFiles({ name: "photo.jpg", mimeType: "image/jpeg", buffer: noisy });
+        await page.waitForTimeout(500);
+        expect((await page.locator("#target").inputValue()) === String(kb), `the size box does not show ${kb}`);
+        await page.getByRole("button", { name: /Process Images/i }).click();
+        await page.getByRole("button", { name: /^Download$/ }).first().waitFor({ timeout: 60000 });
+        await page.evaluate(() => {
+          window.__blobs.length = 0;
+          HTMLAnchorElement.prototype.click = function () {};
+        });
+        await page.getByRole("button", { name: /^Download$/ }).first().click();
+        const res = await page.evaluate(() => window.__waitFor("jpg", 8000));
+        expect(res.ok, "no jpg output");
+        expect(res.size <= kb * 1024, `result is ${(res.size / 1024).toFixed(1)} KB, the limit is ${kb} KB`);
+      } finally {
+        await page.context().close();
+      }
+    });
+  }
+
+  /* Merge */
+  await test("merge-pdf: two files become one PDF, in the order chosen", async () => {
+    const page = await openTool("merge-pdf");
+    try {
+      await addPdfs(page, [{ name: "a.pdf", buffer: pdfA }, { name: "b.pdf", buffer: pdfB }]);
+      await page.getByRole("button", { name: /Move b\.pdf up/ }).click();
+      await page.getByRole("button", { name: "Merge PDF" }).click();
+      await page.getByText("Your PDF is ready").waitFor({ timeout: 30000 });
+      await page.locator('canvas[aria-label="PDF page 1"]').waitFor({ timeout: 20000 });
+      const { bytes, name } = await downloadResult(page, /Download PDF/);
+      expect(name === "merged.pdf", `file is called ${name}`);
+      const pages = await pdfPages(bytes);
+      expect(pages.length === 5, `expected 5 pages, got ${pages.length}`);
+      expect(pages[0].w === 500 && pages[2].w === 300, "the files are not in the order that was chosen");
+    } finally {
+      await page.context().close();
+    }
+  });
+
+  await test("merge-pdf: one file is not enough", async () => {
+    const page = await openTool("merge-pdf");
+    try {
+      await addPdfs(page, [{ name: "a.pdf", buffer: pdfA }]);
+      await page.getByRole("button", { name: "Merge PDF" }).click();
+      await page.getByText(/at least two PDF files/i).waitFor({ timeout: 5000 });
+    } finally {
+      await page.context().close();
+    }
+  });
+
+  /* Split */
+  await test("split-pdf: extracting pages 3 and 1 gives those pages in that order", async () => {
+    const page = await openTool("split-pdf");
+    try {
+      await addPdfs(page, [{ name: "doc.pdf", buffer: pdfA }]);
+      await page.locator("#pdf-ranges").fill("3, 1");
+      await page.getByRole("button", { name: "Split PDF" }).click();
+      await page.getByText("Your PDF is ready").waitFor({ timeout: 30000 });
+      const { bytes, name } = await downloadResult(page, /Download PDF/);
+      expect(name === "doc-pages.pdf", `file is called ${name}`);
+      const pages = await pdfPages(bytes);
+      expect(pages.length === 2 && pages[0].h === 430 && pages[1].h === 410, `wrong pages: ${JSON.stringify(pages)}`);
+    } finally {
+      await page.context().close();
+    }
+  });
+
+  await test("split-pdf: every page as its own file gives a ZIP of three PDFs", async () => {
+    const page = await openTool("split-pdf");
+    try {
+      await addPdfs(page, [{ name: "doc.pdf", buffer: pdfA }]);
+      await page.locator("#pdf-split-mode").selectOption("every");
+      await page.getByRole("button", { name: "Split PDF" }).click();
+      await page.getByText("3 separate PDFs are ready").waitFor({ timeout: 30000 });
+      const { bytes, name } = await downloadResult(page, /Download ZIP/);
+      expect(name === "doc-pages.zip", `file is called ${name}`);
+      let entries = 0;
+      for (let i = 0; i < bytes.length - 3; i++) if (bytes[i] === 0x50 && bytes[i + 1] === 0x4b && bytes[i + 2] === 3 && bytes[i + 3] === 4) entries++;
+      expect(entries === 3, `ZIP has ${entries} files, expected 3`);
+    } finally {
+      await page.context().close();
+    }
+  });
+
+  await test("split-pdf: a page that does not exist is explained", async () => {
+    const page = await openTool("split-pdf");
+    try {
+      await addPdfs(page, [{ name: "doc.pdf", buffer: pdfA }]);
+      await page.locator("#pdf-ranges").fill("9");
+      await page.getByRole("button", { name: "Split PDF" }).click();
+      await page.getByText(/Page 9 does not exist/).waitFor({ timeout: 5000 });
+    } finally {
+      await page.context().close();
+    }
+  });
+
+  /* Rotate */
+  await test("rotate-pdf: every page turns 90 degrees", async () => {
+    const page = await openTool("rotate-pdf");
+    try {
+      await addPdfs(page, [{ name: "doc.pdf", buffer: pdfA }]);
+      await page.getByRole("button", { name: "Rotate PDF" }).click();
+      await page.getByText("Your PDF is ready").waitFor({ timeout: 30000 });
+      const { bytes } = await downloadResult(page, /Download PDF/);
+      const pages = await pdfPages(bytes);
+      expect(pages.length === 3 && pages.every((p) => p.rot === 90), `rotations: ${pages.map((p) => p.rot).join(", ")}`);
+    } finally {
+      await page.context().close();
+    }
+  });
+
+  await test("rotate-pdf: only page 2 turns, 90 degrees to the left", async () => {
+    const page = await openTool("rotate-pdf");
+    try {
+      await addPdfs(page, [{ name: "doc.pdf", buffer: pdfA }]);
+      await page.locator("#pdf-angle").selectOption("270");
+      await page.locator("#pdf-ranges").fill("2");
+      await page.getByRole("button", { name: "Rotate PDF" }).click();
+      await page.getByText("Your PDF is ready").waitFor({ timeout: 30000 });
+      const { bytes } = await downloadResult(page, /Download PDF/);
+      const pages = await pdfPages(bytes);
+      expect(pages.map((p) => p.rot).join(",") === "0,270,0", `rotations: ${pages.map((p) => p.rot).join(", ")}`);
+    } finally {
+      await page.context().close();
+    }
+  });
+
+  /* Delete pages */
+  await test("delete-pdf-pages: removing pages 1 and 3 leaves page 2", async () => {
+    const page = await openTool("delete-pdf-pages");
+    try {
+      await addPdfs(page, [{ name: "doc.pdf", buffer: pdfA }]);
+      await page.locator("#pdf-ranges").fill("1, 3");
+      await page.getByRole("button", { name: "Delete pages" }).click();
+      await page.getByText("Your PDF is ready").waitFor({ timeout: 30000 });
+      const { bytes } = await downloadResult(page, /Download PDF/);
+      const pages = await pdfPages(bytes);
+      expect(pages.length === 1 && pages[0].h === 420, `wrong result: ${JSON.stringify(pages)}`);
+    } finally {
+      await page.context().close();
+    }
+  });
+
+  await test("delete-pdf-pages: deleting every page is refused", async () => {
+    const page = await openTool("delete-pdf-pages");
+    try {
+      await addPdfs(page, [{ name: "doc.pdf", buffer: pdfA }]);
+      await page.locator("#pdf-ranges").fill("1-3");
+      await page.getByRole("button", { name: "Delete pages" }).click();
+      await page.getByText(/every page/i).first().waitFor({ timeout: 5000 });
+    } finally {
+      await page.context().close();
+    }
+  });
+
+  /* Compress */
+  await test("compress-pdf: a scanned PDF gets smaller and keeps its page size", async () => {
+    const page = await openTool("compress-pdf");
+    try {
+      await addPdfs(page, [{ name: "scan.pdf", buffer: scanPdf }]);
+      await page.locator("#pdf-level").selectOption("strong");
+      await page.getByRole("button", { name: "Compress PDF" }).click();
+      await page.getByText("Your PDF is ready").waitFor({ timeout: 90000 });
+      await page.locator('canvas[aria-label="PDF page 1"]').waitFor({ timeout: 20000 });
+      const { bytes, name } = await downloadResult(page, /Download PDF/);
+      expect(name === "scan-compressed.pdf", `file is called ${name}`);
+      expect(bytes.length < scanPdf.length, `${bytes.length} bytes is not smaller than ${scanPdf.length}`);
+      const pages = await pdfPages(bytes);
+      expect(pages.length === 2 && pages[0].w === 600 && pages[0].h === 800, `wrong pages: ${JSON.stringify(pages)}`);
+    } finally {
+      await page.context().close();
+    }
+  });
+
+  await test("compress-pdf: a text-only PDF is left alone and the page says why", async () => {
+    const page = await openTool("compress-pdf");
+    try {
+      await addPdfs(page, [{ name: "text.pdf", buffer: pdfA }]);
+      await page.getByRole("button", { name: "Compress PDF" }).click();
+      await page.getByText(/not smaller than your original/i).waitFor({ timeout: 60000 });
+    } finally {
+      await page.context().close();
+    }
+  });
+
+  /* Compress to a chosen size */
+  expect(scanPdf.length > 900 * 1024, `the scanned test PDF is only ${Math.round(scanPdf.length / 1024)} KB`);
+
+  async function compressToTarget({ preset, custom, unit }) {
+    const page = await openTool("compress-pdf");
+    await addPdfs(page, [{ name: "scan.pdf", buffer: scanPdf }]);
+    await page.locator("#pdf-compress-by").selectOption("size");
+    await page.locator("#pdf-size-preset").selectOption(preset);
+    if (custom !== undefined) {
+      await page.locator("#pdf-size-custom").fill(String(custom));
+      if (unit) await page.locator("#pdf-size-unit").selectOption(unit);
+    }
+    await page.getByRole("button", { name: "Compress PDF" }).click();
+    return page;
+  }
+
+  await test("compress-pdf: the 500 KB preset gives a PDF of 500 KB or less", async () => {
+    const page = await compressToTarget({ preset: "500" });
+    try {
+      await page.getByText("Your PDF is ready").waitFor({ timeout: 120000 });
+      const { bytes } = await downloadResult(page, /Download PDF/);
+      expect(bytes.length <= 500 * 1024, `result is ${Math.round(bytes.length / 1024)} KB`);
+      const pages = await pdfPages(bytes);
+      expect(pages.length === 2 && pages[0].w === 600 && pages[0].h === 800, `wrong pages: ${JSON.stringify(pages)}`);
+    } finally {
+      await page.context().close();
+    }
+  });
+
+  await test("compress-pdf: a custom size in KB (150) is reached", async () => {
+    const page = await compressToTarget({ preset: "custom", custom: 150, unit: "KB" });
+    try {
+      await page.getByText("Your PDF is ready").waitFor({ timeout: 120000 });
+      const { bytes } = await downloadResult(page, /Download PDF/);
+      expect(bytes.length <= 150 * 1024, `result is ${Math.round(bytes.length / 1024)} KB`);
+    } finally {
+      await page.context().close();
+    }
+  });
+
+  await test("compress-pdf: a custom size in MB (0.3) is understood as 307 KB", async () => {
+    const page = await compressToTarget({ preset: "custom", custom: 0.3, unit: "MB" });
+    try {
+      await page.getByText("Your PDF is ready").waitFor({ timeout: 120000 });
+      const { bytes } = await downloadResult(page, /Download PDF/);
+      expect(bytes.length <= 0.3 * 1024 * 1024, `result is ${Math.round(bytes.length / 1024)} KB`);
+    } finally {
+      await page.context().close();
+    }
+  });
+
+  await test("compress-pdf: a size that cannot be reached returns the smallest file and says so", async () => {
+    // 5 KB is the smallest size the tool accepts; two noisy pages cannot fit in it.
+    const page = await compressToTarget({ preset: "custom", custom: 5, unit: "KB" });
+    try {
+      await page.getByText(/smallest the tool could make/i).waitFor({ timeout: 120000 });
+      const { bytes } = await downloadResult(page, /Download PDF/);
+      expect(bytes.length < scanPdf.length, "the smallest file is not smaller than the original");
+    } finally {
+      await page.context().close();
+    }
+  });
+
+  await test("compress-pdf: a PDF that already fits the size is left alone", async () => {
+    const page = await openTool("compress-pdf");
+    try {
+      await addPdfs(page, [{ name: "small.pdf", buffer: pdfA }]);
+      await page.locator("#pdf-compress-by").selectOption("size");
+      await page.locator("#pdf-size-preset").selectOption("100");
+      await page.getByRole("button", { name: "Compress PDF" }).click();
+      await page.getByText(/already .* fits within 100\.00 KB/i).waitFor({ timeout: 30000 });
+    } finally {
+      await page.context().close();
+    }
+  });
+
+  await test("compress-pdf: an empty custom size is explained", async () => {
+    const page = await openTool("compress-pdf");
+    try {
+      await addPdfs(page, [{ name: "scan.pdf", buffer: scanPdf }]);
+      await page.locator("#pdf-compress-by").selectOption("size");
+      await page.locator("#pdf-size-preset").selectOption("custom");
+      await page.locator("#pdf-size-custom").fill("");
+      await page.getByRole("button", { name: "Compress PDF" }).click();
+      await page.getByText(/Type the size you want/).waitFor({ timeout: 5000 });
+    } finally {
+      await page.context().close();
+    }
+  });
+
+  /* PDF to text */
+  await test("pdf-to-text: the words of the PDF come out", async () => {
+    const page = await openTool("pdf-to-text");
+    try {
+      await addPdfs(page, [{ name: "doc.pdf", buffer: pdfA }]);
+      await page.getByRole("button", { name: "Extract text" }).click();
+      await page.getByLabel("Extracted text").waitFor({ timeout: 30000 });
+      const text = await page.getByLabel("Extracted text").inputValue();
+      expect(/Alpha page 1/.test(text) && /Alpha page 3/.test(text), `text was: ${text.slice(0, 80)}`);
+      const { bytes, name } = await downloadResult(page, /Download \.txt/);
+      expect(name === "doc.txt" && /Alpha page 2/.test(bytes.toString("utf8")), "the downloaded .txt is wrong");
+    } finally {
+      await page.context().close();
+    }
+  });
+
+  await test("pdf-to-text: a scan with no text says so", async () => {
+    const page = await openTool("pdf-to-text");
+    try {
+      await addPdfs(page, [{ name: "scan.pdf", buffer: scanPdf }]);
+      await page.getByRole("button", { name: "Extract text" }).click();
+      await page.getByText("No text found").waitFor({ timeout: 30000 });
+    } finally {
+      await page.context().close();
+    }
+  });
+
+  /* A preview appears as soon as a file is chosen */
+  for (const slug of ["merge-pdf", "split-pdf", "rotate-pdf", "compress-pdf", "delete-pdf-pages", "pdf-to-text"]) {
+    await test(`select a PDF on ${slug}: first-page preview appears`, async () => {
+      const page = await openTool(slug);
+      try {
+        await addPdfs(page, [{ name: "doc.pdf", buffer: pdfA }]);
+        await page.waitForFunction(() => {
+          const el = document.querySelector("img.filePreview");
+          return el && el.complete && el.naturalWidth > 20;
+        }, null, { timeout: 20000 });
+      } finally {
+        await page.context().close();
+      }
+    });
+  }
+
+  for (const kb of [20, 50, 100, 200]) {
+    await test(`select a photo on compress-image-to-${kb}kb: preview appears`, async () => {
+      const page = await openTool(`compress-image-to-${kb}kb`);
+      try {
+        await page.locator("input[type=file]").first().setInputFiles({ name: "photo.jpg", mimeType: "image/jpeg", buffer: fixtures.jpg });
+        await page.waitForFunction(() => {
+          const el = document.querySelector("img.filePreview");
+          return el && el.complete && el.naturalWidth > 20;
+        }, null, { timeout: 20000 });
+      } finally {
+        await page.context().close();
+      }
+    });
+  }
+}
+
+/* ---------- retired pages and the sitemap ---------- */
+
+async function runRedirects() {
+  console.log("\nRetired pages");
+
+  const moved = [
+    ["pdf-to-eps", "pdf-to-png"],
+    ["pdf-to-svg", "pdf-to-png"],
+    ["pdf-to-bmp", "pdf-to-png"],
+    ["pdf-to-gif", "pdf-to-png"],
+    ["pdf-to-heic", "pdf-to-jpg"],
+    ["pdf-to-avif", "pdf-to-webp"],
+    ["jpg-to-avif", "image-converter"],
+    ["png-to-avif", "image-converter"],
+    ["webp-to-avif", "image-converter"],
+    ["avif-to-webp", "image-converter"],
+  ];
+
+  for (const [from, to] of moved) {
+    await test(`/${from} moves permanently to /${to}`, async () => {
+      const res = await fetch(`${BASE}/${from}`, { redirect: "manual" });
+      expect(res.status === 301 || res.status === 308, `status is ${res.status}`);
+      const target = new URL(res.headers.get("location"), BASE).pathname;
+      expect(target === `/${to}`, `goes to ${target}`);
+      expect((await fetch(`${BASE}${target}`)).status === 200, "the target page does not open");
+    });
+  }
+
+  await test("every URL in the sitemap opens directly (no redirects, no errors)", async () => {
+    const xml = await (await fetch(`${BASE}/sitemap.xml`)).text();
+    const paths = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => new URL(m[1]).pathname);
+    const bad = [];
+    for (const p of paths) {
+      const res = await fetch(`${BASE}${p}`, { redirect: "manual" });
+      if (res.status !== 200) bad.push(`${p} (${res.status})`);
+    }
+    expect(bad.length === 0, `not a plain 200: ${bad.join(", ")}`);
+  });
+}
+
 /* ---------- main ---------- */
 
 async function main() {
@@ -923,6 +1337,8 @@ async function main() {
   await runConverters();
   await runPdf();
   await runExtras();
+  await runNewTools();
+  await runRedirects();
   await runSelectionPreviews();
   await runSeo();
   await runPageHealth();

@@ -1,3 +1,5 @@
+import { buildKb, buildPdfTool, moreToolName } from "@/lib/moreTools";
+
 export const SITE_URL = "https://imgcontrol.com";
 
 export type Faq = { q: string; a: string };
@@ -79,26 +81,18 @@ const PAIR_NOTES: Record<string, string> = {
     "Converting JPG to PNG is common when an image has to be edited again without further compression artifacts, or when a platform asks for PNG uploads.",
   "jpg-to-webp":
     "This is one of the most popular conversions for website owners, because switching photos from JPG to WebP usually trims page weight and helps pages load faster.",
-  "jpg-to-avif":
-    "JPG to AVIF is aimed at performance work: AVIF can shrink photographs noticeably further than WebP, which helps image-heavy pages.",
   "png-to-jpg":
     "PNG to JPG is the usual way to shrink a screenshot or exported graphic for email, forms and uploads that only accept JPG.",
   "png-to-webp":
     "PNG to WebP keeps transparency while cutting file size, which makes it a good fit for logos, UI graphics and product cut-outs on websites.",
-  "png-to-avif":
-    "PNG to AVIF is useful when you want transparency and the smallest possible file for a web graphic, as long as your audience uses modern browsers.",
   "webp-to-jpg":
     "WebP to JPG solves the classic problem of a downloaded web image that your editor, printer or upload form refuses to open.",
   "webp-to-png":
     "WebP to PNG gives you a lossless, widely supported copy that is easy to edit, and it keeps any transparent areas intact.",
-  "webp-to-avif":
-    "WebP to AVIF is a step for sites that already serve WebP and want to test even smaller files for modern browsers.",
   "avif-to-jpg":
     "AVIF to JPG makes a modern web image usable everywhere, including older editors, print shops and messaging apps.",
   "avif-to-png":
     "AVIF to PNG produces an editable, lossless copy that keeps transparency, which is handy before retouching or resizing.",
-  "avif-to-webp":
-    "AVIF to WebP is a compatibility step: WebP is understood by more software and browsers while remaining compact.",
   "heic-to-jpg":
     "HEIC to JPG is the standard fix for iPhone photos that will not open on Windows or will not upload to a website.",
   "heic-to-png":
@@ -239,7 +233,7 @@ function buildPdfFromImage(slug: string): ToolContent | null {
         a: `Yes. The same tool accepts JPG, PNG, WebP and other supported images, so you can mix formats in one PDF.`,
       },
     ],
-    related: ["image-to-pdf", "pdf-to-jpg", "image-compressor", "image-resizer", "jpg-to-pdf", "png-to-pdf", "webp-to-pdf"].filter(
+    related: ["image-to-pdf", "merge-pdf", "pdf-to-jpg", "image-compressor", "image-resizer", "jpg-to-pdf", "png-to-pdf", "webp-to-pdf"].filter(
       (s) => s !== slug,
     ),
     articles: ["how-to-convert-images-to-pdf"],
@@ -374,7 +368,7 @@ const UTILITIES: Record<string, ToolContent> = {
       { q: "Are my images uploaded?", a: "No. Everything runs in your browser." },
       { q: "Can I process several images together?", a: "Yes. Add multiple files and download the results together." },
     ],
-    related: ["image-compressor", "image-resizer", "jpg-to-webp", "png-to-webp", "jpg-to-avif"],
+    related: ["image-compressor", "image-resizer", "jpg-to-webp", "png-to-webp", "compress-image-to-100kb"],
     articles: ["how-to-optimize-images-for-a-website"],
   },
 };
@@ -385,12 +379,6 @@ const EXTRAS_ONLY = new Set([
   "pdf-to-jpg",
   "pdf-to-png",
   "pdf-to-webp",
-  "pdf-to-gif",
-  "pdf-to-avif",
-  "pdf-to-heic",
-  "pdf-to-svg",
-  "pdf-to-bmp",
-  "pdf-to-eps",
 ]);
 
 export const TOOL_NAMES: Record<string, string> = {
@@ -405,6 +393,8 @@ export const TOOL_NAMES: Record<string, string> = {
 
 export function toolName(slug: string): string {
   if (TOOL_NAMES[slug]) return TOOL_NAMES[slug];
+  const more = moreToolName(slug);
+  if (more) return more;
   return slug
     .split("-")
     .map((w) => (["jpg", "png", "pdf", "svg", "eps", "bmp", "gif", "avif", "heic", "raw"].includes(w) ? w.toUpperCase() : w === "webp" ? "WebP" : w === "to" ? "to" : w[0].toUpperCase() + w.slice(1)))
@@ -412,21 +402,21 @@ export function toolName(slug: string): string {
 }
 
 export function getToolContent(slug: string): ToolContent | null {
-  return UTILITIES[slug] ?? buildConversion(slug) ?? buildPdfFromImage(slug);
+  return (
+    UTILITIES[slug] ??
+    buildKb(slug) ??
+    buildPdfTool(slug) ??
+    buildConversion(slug) ??
+    buildPdfFromImage(slug)
+  );
 }
 
 const EXTRAS_RELATED: Record<string, string[]> = {
-  "image-to-pdf": ["jpg-to-pdf", "png-to-pdf", "webp-to-pdf", "pdf-to-jpg", "image-compressor"],
+  "image-to-pdf": ["jpg-to-pdf", "png-to-pdf", "webp-to-pdf", "pdf-to-jpg", "merge-pdf"],
   "raw-to-jpg": ["jpg-to-webp", "image-compressor", "image-resizer", "jpg-to-png"],
-  "pdf-to-jpg": ["pdf-to-png", "pdf-to-webp", "image-to-pdf", "image-compressor"],
-  "pdf-to-png": ["pdf-to-jpg", "pdf-to-webp", "image-to-pdf", "png-to-jpg"],
-  "pdf-to-webp": ["pdf-to-jpg", "pdf-to-png", "pdf-to-avif", "image-compressor"],
-  "pdf-to-gif": ["pdf-to-png", "pdf-to-jpg", "pdf-to-webp", "image-to-pdf"],
-  "pdf-to-avif": ["pdf-to-webp", "pdf-to-jpg", "pdf-to-png", "image-compressor"],
-  "pdf-to-heic": ["pdf-to-jpg", "heic-to-jpg", "pdf-to-png", "image-to-pdf"],
-  "pdf-to-svg": ["pdf-to-png", "pdf-to-eps", "pdf-to-jpg", "image-to-pdf"],
-  "pdf-to-bmp": ["pdf-to-png", "pdf-to-jpg", "pdf-to-gif", "image-to-pdf"],
-  "pdf-to-eps": ["pdf-to-svg", "pdf-to-png", "pdf-to-jpg", "image-to-pdf"],
+  "pdf-to-jpg": ["pdf-to-png", "pdf-to-webp", "image-to-pdf", "compress-pdf", "split-pdf"],
+  "pdf-to-png": ["pdf-to-jpg", "pdf-to-webp", "image-to-pdf", "png-to-jpg", "pdf-to-text"],
+  "pdf-to-webp": ["pdf-to-jpg", "pdf-to-png", "image-compressor", "pdf-to-text"],
 };
 
 export function getExtrasRelated(slug: string): string[] | null {

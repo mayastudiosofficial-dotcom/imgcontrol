@@ -20,6 +20,8 @@ type Output = {
 
 type Props = {
   mode?: ToolMode;
+  /** Opens in "Target file size" mode with this many KB already filled in. */
+  presetKb?: number;
 };
 
 const INPUT_EXTENSIONS = [
@@ -145,41 +147,71 @@ async function createTargetSizeBlob(
   mime: string,
   targetBytes: number,
   startingQuality: number,
-): Promise<Blob> {
-  let quality = Math.min(
-    1,
-    Math.max(0.08, startingQuality),
-  );
+): Promise<{ blob: Blob; width: number; height: number }> {
+  const lossy =
+    mime === "image/jpeg" ||
+    mime === "image/webp" ||
+    mime === "image/avif";
 
-  let blob = await encodeImage(
-    image,
-    width,
-    height,
-    mime,
-    quality,
-  );
+  let outputWidth = Math.max(1, Math.round(width));
+  let outputHeight = Math.max(1, Math.round(height));
+
+  let quality = Math.min(1, Math.max(0.08, startingQuality));
+
+  let blob = await encodeImage(image, outputWidth, outputHeight, mime, quality);
 
   /*
-   * Try to get the output under the requested
-   * maximum target size by gradually reducing quality.
+   * 1. Lower the quality a little, but not into visible blocks.
+   *    PNG has no quality setting, so it goes straight to resizing.
+   */
+  const QUALITY_FLOOR = 0.4;
+
+  if (lossy) {
+    for (
+      let attempt = 0;
+      attempt < 10 && blob.size > targetBytes && quality > QUALITY_FLOOR;
+      attempt += 1
+    ) {
+      quality = Math.max(QUALITY_FLOOR, quality - 0.08);
+      blob = await encodeImage(image, outputWidth, outputHeight, mime, quality);
+    }
+  }
+
+  /*
+   * 2. Still too big: use fewer pixels, keeping the shape of the picture,
+   *    until the file fits or the picture is already tiny.
    */
   for (
     let attempt = 0;
-    attempt < 12 && blob.size > targetBytes;
+    attempt < 30 &&
+    blob.size > targetBytes &&
+    (outputWidth > 24 || outputHeight > 24);
     attempt += 1
   ) {
-    quality = Math.max(0.08, quality - 0.08);
-
-    blob = await encodeImage(
-      image,
-      width,
-      height,
-      mime,
-      quality,
+    const ratio = Math.min(
+      0.95,
+      Math.max(0.5, Math.sqrt(targetBytes / Math.max(1, blob.size)) * 0.95),
     );
+
+    outputWidth = Math.max(1, Math.floor(outputWidth * ratio));
+    outputHeight = Math.max(1, Math.floor(outputHeight * ratio));
+
+    blob = await encodeImage(image, outputWidth, outputHeight, mime, quality);
   }
 
-  return blob;
+  /* 3. Last resort for very small limits: lower the quality further. */
+  if (lossy) {
+    for (
+      let attempt = 0;
+      attempt < 6 && blob.size > targetBytes && quality > 0.08;
+      attempt += 1
+    ) {
+      quality = Math.max(0.08, quality - 0.1);
+      blob = await encodeImage(image, outputWidth, outputHeight, mime, quality);
+    }
+  }
+
+  return { blob, width: outputWidth, height: outputHeight };
 }
 
 async function createResizeTargetBlob(
@@ -250,6 +282,7 @@ async function createResizeTargetBlob(
 
 export default function OptimizerClient({
   mode = "compress",
+  presetKb,
 }: Props) {
   const input = useRef<HTMLInputElement>(null);
 
@@ -257,13 +290,13 @@ export default function OptimizerClient({
 
   const [quality, setQuality] = useState(72);
 
-  const [target, setTarget] = useState(500);
+  const [target, setTarget] = useState(presetKb ?? 500);
 
   const [unit, setUnit] = useState<"KB" | "MB">(
     "KB",
   );
 
-  const [sizeMode, setSizeMode] = useState(false);
+  const [sizeMode, setSizeMode] = useState(presetKb !== undefined);
 
   const [convertTargetEnabled, setConvertTargetEnabled] =
     useState(false);
@@ -406,7 +439,7 @@ export default function OptimizerClient({
               ? convertTarget * 1024 * 1024
               : convertTarget * 1024;
 
-          const blob = await createTargetSizeBlob(
+          const sized = await createTargetSizeBlob(
             image,
             outputWidth,
             outputHeight,
@@ -422,13 +455,13 @@ export default function OptimizerClient({
               outputMime,
             )}`,
 
-            blob,
+            blob: sized.blob,
 
             original: file.size,
 
-            width: outputWidth,
+            width: sized.width,
 
-            height: outputHeight,
+            height: sized.height,
           });
 
           setProgress(
@@ -538,7 +571,7 @@ export default function OptimizerClient({
                 : target *
                   1024;
 
-            const blob =
+            const sized =
               await createTargetSizeBlob(
                 image,
                 outputWidth,
@@ -555,16 +588,16 @@ export default function OptimizerClient({
                 outputMime,
               )}`,
 
-              blob,
+              blob: sized.blob,
 
               original:
                 file.size,
 
               width:
-                outputWidth,
+                sized.width,
 
               height:
-                outputHeight,
+                sized.height,
             });
 
             setProgress(

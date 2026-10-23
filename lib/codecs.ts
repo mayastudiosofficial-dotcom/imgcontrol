@@ -63,82 +63,17 @@ export function isHeicFile(file: File) {
 }
 
 export function needsWasmEncoder(mime: string) {
-  return mime === "image/avif" || mime === "image/heic";
+  return mime === "image/avif";
 }
 
-/*
- * The HEIC encoder starts its own pthread workers from its own script, which
- * only works when that script is served untouched. It therefore lives in
- * /codecs/heic as plain files instead of going through the bundler like AVIF.
- */
-let heicWorker: Worker | null = null;
-let heicNextId = 1;
-const heicPending = new Map<number, Pending>();
-const HEIC_TIMEOUT_MS = 5 * 60 * 1000;
-
-function failHeic(error: Error) {
-  heicPending.forEach((p) => p.reject(error));
-  heicPending.clear();
-  heicWorker?.terminate();
-  heicWorker = null;
-}
-
-function getHeicWorker(): Worker {
-  if (heicWorker) return heicWorker;
-
-  heicWorker = new Worker("/codecs/heic/worker.js", { type: "module" });
-
-  heicWorker.onmessage = (event: MessageEvent) => {
-    const { id, ok, buffer, error } = event.data;
-    const entry = heicPending.get(id);
-    if (!entry) return;
-    heicPending.delete(id);
-    if (ok) entry.resolve({ buffer });
-    else entry.reject(new Error(error || "HEIC encoding failed."));
-  };
-
-  heicWorker.onerror = () => failHeic(new Error("HEIC encoder could not start in this browser."));
-
-  return heicWorker;
-}
-
-function encodeHeic(image: ImageData, quality: number): Promise<Blob> {
-  const buffer = image.data.buffer.slice(0) as ArrayBuffer;
-
-  return new Promise<Blob>((resolve, reject) => {
-    const id = heicNextId++;
-    const timer = setTimeout(() => failHeic(new Error("HEIC encoding took too long.")), HEIC_TIMEOUT_MS);
-
-    heicPending.set(id, {
-      resolve: (v) => {
-        clearTimeout(timer);
-        resolve(new Blob([v.buffer], { type: "image/heic" }));
-      },
-      reject: (e) => {
-        clearTimeout(timer);
-        reject(e);
-      },
-    });
-
-    getHeicWorker().postMessage(
-      { id, buffer, width: image.width, height: image.height, quality: Math.round(quality * 100), preset: "ultrafast" },
-      [buffer],
-    );
-  });
-}
-
-/** Encode a canvas as a real AVIF or HEIC file. quality is 0..1. */
+/** Encode a canvas as a real AVIF file. quality is 0..1. */
 export async function encodeCanvasWithWasm(
   canvas: HTMLCanvasElement,
-  mime: "image/avif" | "image/heic",
+  mime: "image/avif",
   quality = 0.6,
 ): Promise<Blob> {
-  const fmt: Fmt = mime === "image/avif" ? "avif" : "heic";
+  const fmt: Fmt = "avif";
   const image = canvasPixels(canvas);
-
-  if (fmt === "heic") {
-    return encodeHeic(image, quality);
-  }
 
   const buffer = image.data.buffer.slice(0) as ArrayBuffer;
 
