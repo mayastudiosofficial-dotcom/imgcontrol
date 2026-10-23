@@ -180,6 +180,28 @@ async function buildFixtures() {
     return btoa(s);
   }, BASE), 45000, "HEIC fixture generation");
   fixtures.heic = Buffer.from(heicB64, "base64");
+
+  // A phone-sized photo, so the conversion lasts long enough to watch its progress bar.
+  const bigB64 = await withTimeout(page.evaluate(async (origin) => {
+    const m = await import(origin + "/_t/lib/index.js");
+    const w = 4000;
+    const h = 3000;
+    const d = new Uint8ClampedArray(w * h * 4);
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const i = (y * w + x) * 4;
+        d[i] = (x * 255) / w + ((x * y) % 29);
+        d[i + 1] = (y * 255) / h + ((x ^ y) % 31);
+        d[i + 2] = ((x + y) * 255) / (w + h);
+        d[i + 3] = 255;
+      }
+    }
+    const out = m.heic.encode(new ImageData(d, w, h), { quality: 60, preset: "ultrafast" });
+    let s = "";
+    new Uint8Array(out).forEach((v) => (s += String.fromCharCode(v)));
+    return btoa(s);
+  }, BASE), 90000, "large HEIC fixture generation");
+  fixtures.heicBig = Buffer.from(bigB64, "base64");
   await page.context().close();
 }
 
@@ -458,6 +480,32 @@ async function runSeo() {
 
 /* ---------- cropper, batches, size limit, RAW ---------- */
 
+// Reads the percentage shown on the "Converting NN%" button while a conversion runs.
+function sampleProgress(page, maxMs) {
+  return page.evaluate(async (maxMs) => {
+    const seen = [];
+    const end = Date.now() + maxMs;
+    while (Date.now() < end) {
+      const button = [...document.querySelectorAll("button")].find((b) => /Converting\s*\d+%/.test(b.textContent));
+      if (button) seen.push(Number(button.textContent.match(/(\d+)%/)[1]));
+      else if (seen.length) break;
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    return seen;
+  }, maxMs);
+}
+
+function checkSteadyProgress(seen, { minSteps, maxJump }) {
+  expect(seen.length > 0, "no progress percentage was ever shown");
+  for (let i = 1; i < seen.length; i++) {
+    expect(seen[i] >= seen[i - 1], `progress went backwards: ${seen[i - 1]}% -> ${seen[i]}%`);
+  }
+  const distinct = [...new Set(seen)].filter((v) => v > 0 && v < 100);
+  expect(distinct.length >= minSteps, `progress only showed ${distinct.length} steps (${[...new Set(seen)].join(", ")}%)`);
+  const jumps = [...new Set(seen)].map((v, i, a) => (i ? v - a[i - 1] : v));
+  expect(Math.max(...jumps) <= maxJump, `progress jumped by ${Math.max(...jumps)} points (${[...new Set(seen)].join(", ")}%)`);
+}
+
 async function noisyJpeg(page, w, h) {
   const b64 = await page.evaluate(async ([w, h]) => {
     const c = document.createElement("canvas");
@@ -567,6 +615,22 @@ async function runExtras() {
     }
   });
 
+  await test("heic-to-jpg: the progress bar moves steadily instead of jumping to 100%", async () => {
+    const page = await newPage();
+    try {
+      await page.goto(`${BASE}/heic-to-jpg`);
+      await page.locator("input[type=file]").first().setInputFiles({ name: "big.heic", mimeType: "image/heic", buffer: fixtures.heicBig });
+      await page.waitForTimeout(600);
+      const sampling = sampleProgress(page, 90000);
+      await page.getByRole("button", { name: /Convert to JPG/i }).click();
+      checkSteadyProgress(await sampling, { minSteps: 4, maxJump: 40 });
+      const res = await page.evaluate(() => window.__waitFor("jpg", 30000));
+      expect(res.ok, "no jpg output");
+    } finally {
+      await page.context().close();
+    }
+  });
+
   await test("raw-to-jpg: page loads and accepts RAW formats", async () => {
     const page = await newPage();
     try {
@@ -594,6 +658,20 @@ async function runExtras() {
           const el = document.querySelector("img.resultThumb");
           return el && el.complete && el.naturalWidth > 100;
         }, null, { timeout: 120000 });
+      } finally {
+        await page.context().close();
+      }
+    });
+
+    await test("raw-to-jpg: the progress bar moves steadily instead of sitting at 0%", async () => {
+      const page = await newPage();
+      try {
+        await page.goto(`${BASE}/raw-to-jpg`);
+        await page.locator("input[type=file]").first().setInputFiles(process.env.RAW_SAMPLE);
+        await page.waitForTimeout(600);
+        const sampling = sampleProgress(page, 150000);
+        await page.getByRole("button", { name: /Convert RAW to JPG/i }).click();
+        checkSteadyProgress(await sampling, { minSteps: 8, maxJump: 25 });
       } finally {
         await page.context().close();
       }

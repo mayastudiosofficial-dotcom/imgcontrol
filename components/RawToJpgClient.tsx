@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import JSZip from "jszip";
 import ResultThumb from "@/components/ResultThumb";
+import { creep, nextFrame } from "@/lib/progress";
 import LibRaw from "libraw-wasm";
 
 type Output = {
@@ -59,15 +60,20 @@ function oneAtATime<T>(job: () => Promise<T>): Promise<T> {
  * Previews are decoded at half size. A full conversion that fails (usually the
  * browser running out of memory on a large file) is retried at half size too.
  */
-async function rawToJpeg(file: File, maxBytes?: number, preview = false) {
+async function rawToJpeg(
+  file: File,
+  maxBytes?: number,
+  preview = false,
+  onProgress?: (fraction: number) => void,
+) {
   return oneAtATime(async () => {
     if (preview) return { ...(await decodeRaw(file, maxBytes, true)), reduced: false };
 
     try {
-      return { ...(await decodeRaw(file, maxBytes, false)), reduced: false };
+      return { ...(await decodeRaw(file, maxBytes, false, onProgress)), reduced: false };
     } catch (firstError) {
       try {
-        return { ...(await decodeRaw(file, maxBytes, true)), reduced: true };
+        return { ...(await decodeRaw(file, maxBytes, true, onProgress)), reduced: true };
       } catch {
         throw firstError;
       }
@@ -75,22 +81,44 @@ async function rawToJpeg(file: File, maxBytes?: number, preview = false) {
   });
 }
 
-async function decodeRaw(file: File, maxBytes: number | undefined, halfSize: boolean) {
+async function decodeRaw(
+  file: File,
+  maxBytes: number | undefined,
+  halfSize: boolean,
+  onProgress: (fraction: number) => void = () => {},
+) {
   const raw = new LibRaw();
+  const sizeMb = file.size / 1048576;
+  let stopEncodeProgress: (() => void) | undefined;
 
   try {
+    onProgress(0.02);
     const buffer = await file.arrayBuffer();
-    await raw.open(new Uint8Array(buffer), {
-      useCameraWb: true,
-      useCameraMatrix: 1,
-      outputColor: 1,
-      outputBps: 8,
-      userFlip: -1,
-      userQual: 3,
-      halfSize,
-    });
+    onProgress(0.05);
 
-    const decoded = await raw.imageData();
+    const stopOpen = creep(onProgress, 0.05, 0.15, 600 + sizeMb * 40);
+    try {
+      await raw.open(new Uint8Array(buffer), {
+        useCameraWb: true,
+        useCameraMatrix: 1,
+        outputColor: 1,
+        outputBps: 8,
+        userFlip: -1,
+        userQual: 3,
+        halfSize,
+      });
+    } finally {
+      stopOpen();
+    }
+
+    // Demosaicing is the long step (roughly half a second per MB of a full-size file).
+    const stopDecode = creep(onProgress, 0.15, 0.75, 400 + sizeMb * (halfSize ? 300 : 550));
+    let decoded;
+    try {
+      decoded = await raw.imageData();
+    } finally {
+      stopDecode();
+    }
     if (!decoded) throw new Error("RAW decoder returned no image data.");
 
     // The decoder keeps hundreds of MB of WebAssembly memory; free it as soon as the pixels are here.
@@ -115,7 +143,14 @@ async function decodeRaw(file: File, maxBytes: number | undefined, halfSize: boo
     const imageData = context.createImageData(width, height);
     const rgba = imageData.data;
 
-    for (let i = 0, pixel = 0; pixel < width * height; pixel += 1, i += colors) {
+    const totalPixels = width * height;
+
+    for (let i = 0, pixel = 0; pixel < totalPixels; pixel += 1, i += colors) {
+      if (pixel > 0 && pixel % 4_000_000 === 0) {
+        onProgress(0.78 + 0.12 * (pixel / totalPixels));
+        await nextFrame();
+      }
+
       const r = pixelTo8(source[i] ?? 0, bits);
       const g = pixelTo8(source[i + 1] ?? source[i] ?? 0, bits);
       const b = pixelTo8(source[i + 2] ?? source[i] ?? 0, bits);
@@ -128,6 +163,9 @@ async function decodeRaw(file: File, maxBytes: number | undefined, halfSize: boo
     }
 
     context.putImageData(imageData, 0, 0);
+    onProgress(0.9);
+    await nextFrame();
+    stopEncodeProgress = creep(onProgress, 0.9, 0.99, 400 + (totalPixels / 1e6) * 60);
 
     const render = (w: number, h: number, q: number) =>
       new Promise<Blob>((resolve, reject) => {
@@ -218,6 +256,7 @@ async function decodeRaw(file: File, maxBytes: number | undefined, halfSize: boo
 
     return { blob, width: outWidth, height: outHeight };
   } finally {
+    stopEncodeProgress?.();
     raw.dispose();
   }
 }
@@ -304,7 +343,12 @@ export default function RawToJpgClient() {
       for (let i = 0; i < files.length; i += 1) {
         const file = files[i];
         setStage(`Converting ${file.name} (${i + 1} of ${files.length}). Large RAW files can take up to a minute, please keep this tab open.`);
-        const converted = await rawToJpeg(file, maxBytes);
+        // The bar covers all files; inside one file it only moves forward.
+        let furthest = 0;
+        const converted = await rawToJpeg(file, maxBytes, false, (fraction) => {
+          furthest = Math.max(furthest, Math.min(fraction, 0.99));
+          setProgress(Math.round(((i + furthest) / files.length) * 100));
+        });
         if (converted.reduced) reducedCount += 1;
         next.push({
           name: `${stripExt(file.name)}.jpg`,
