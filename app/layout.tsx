@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import "./globals.css";
 import ThemeToggle from "@/components/ThemeToggle";
+import MobileMenu from "@/components/MobileMenu";
 
 const siteJsonLd = [
   {
@@ -121,35 +122,7 @@ export default function RootLayout({
             </nav>
 
             {/* MOBILE MENU */}
-            <div className="menuWrap">
-              <details>
-                <summary className="menuBtn">
-                  ☰
-                </summary>
-
-                <div className="mobileLinks">
-                  <Link href="/">
-                    Home
-                  </Link>
-
-                  <Link href="/tools">
-                    All Tools
-                  </Link>
-
-                  <Link href="/blog">
-                    Blog
-                  </Link>
-
-                  <Link href="/about">
-                    About
-                  </Link>
-
-                  <Link href="/contact">
-                    Contact
-                  </Link>
-                </div>
-              </details>
-            </div>
+            <MobileMenu />
           </div>
         </header>
 

@@ -804,6 +804,108 @@ async function runPageHealth() {
   }
 }
 
+/* ---------- phone menu and footer ---------- */
+
+async function runPhoneChrome() {
+  console.log("\nPhone menu and footer");
+
+  async function phone(width, fn) {
+    const context = await browser.newContext({ viewport: { width, height: 844 }, isMobile: true, hasTouch: true });
+    const page = await context.newPage();
+    try {
+      await page.goto(`${BASE}/`, { waitUntil: "networkidle" });
+      await fn(page);
+    } finally {
+      await context.close();
+    }
+  }
+
+  const openMenu = async (page) => {
+    await page.getByRole("button", { name: "Open menu" }).tap();
+    await page.locator("#mobile-menu").waitFor({ timeout: 5000 });
+  };
+
+  await test("phone menu: has no extra disclosure triangle", async () => {
+    await phone(390, async (page) => {
+      expect((await page.locator("header details, header summary").count()) === 0, "the old <details> menu is still there");
+    });
+  });
+
+  await test("phone menu: closes after choosing a link", async () => {
+    await phone(390, async (page) => {
+      await openMenu(page);
+      await page.locator("#mobile-menu").getByRole("link", { name: "About" }).tap();
+      await page.waitForURL(/\/about$/, { timeout: 10000 });
+      await page.waitForFunction(() => !document.querySelector("#mobile-menu"), null, { timeout: 5000 });
+    });
+  });
+
+  await test("phone menu: closes when tapping outside it", async () => {
+    await phone(390, async (page) => {
+      await openMenu(page);
+      await page.touchscreen.tap(60, 700);
+      await page.waitForFunction(() => !document.querySelector("#mobile-menu"), null, { timeout: 5000 });
+    });
+  });
+
+  await test("phone menu: closes with Escape and with the same button", async () => {
+    await phone(390, async (page) => {
+      await openMenu(page);
+      await page.keyboard.press("Escape");
+      await page.waitForFunction(() => !document.querySelector("#mobile-menu"), null, { timeout: 5000 });
+      await openMenu(page);
+      await page.getByRole("button", { name: "Close menu" }).tap();
+      await page.waitForFunction(() => !document.querySelector("#mobile-menu"), null, { timeout: 5000 });
+    });
+  });
+
+  await test("phone menu: the theme switch does not cover the open menu", async () => {
+    await phone(390, async (page) => {
+      await openMenu(page);
+      const opacity = await page.evaluate(() => getComputedStyle(document.querySelector(".themeToggle")).opacity);
+      expect(Number(opacity) === 0, `theme switch is still visible over the menu (opacity ${opacity})`);
+    });
+  });
+
+  for (const width of [320, 360, 390]) {
+    await test(`phone footer at ${width}px: Tools, Conversions and Company sit side by side`, async () => {
+      await phone(width, async (page) => {
+        const boxes = await page.evaluate(() =>
+          [...document.querySelectorAll("footer h4")].map((h) => {
+            const r = h.getBoundingClientRect();
+            return { text: h.textContent, x: Math.round(r.left), y: Math.round(r.top + window.scrollY) };
+          }),
+        );
+        expect(boxes.length === 3, `expected 3 footer headings, found ${boxes.length}`);
+        expect(new Set(boxes.map((b) => b.y)).size === 1, `headings are not on one row: ${JSON.stringify(boxes)}`);
+        expect(new Set(boxes.map((b) => b.x)).size === 3, `headings overlap: ${JSON.stringify(boxes)}`);
+
+        const clipped = await page.evaluate(() =>
+          [...document.querySelectorAll("footer a")]
+            .filter((a) => a.scrollWidth > a.clientWidth + 1)
+            .map((a) => a.textContent.trim()),
+        );
+        expect(clipped.length === 0, `footer links cut off: ${clipped.join(", ")}`);
+
+        const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+        expect(overflow <= 1, `page is ${overflow}px wider than the screen`);
+      });
+    });
+  }
+
+  for (const width of [360, 390]) {
+    await test(`phone home at ${width}px: the three trust points share one row`, async () => {
+      await phone(width, async (page) => {
+        const tops = await page.evaluate(() =>
+          [...document.querySelectorAll(".homeHeroTrust span")].map((s) => Math.round(s.getBoundingClientRect().top)),
+        );
+        expect(tops.length === 3, `expected 3 trust points, found ${tops.length}`);
+        expect(new Set(tops).size === 1, `trust points wrap onto several rows: ${tops.join(", ")}`);
+      });
+    });
+  }
+}
+
 /* ---------- main ---------- */
 
 async function main() {
@@ -824,6 +926,7 @@ async function main() {
   await runSelectionPreviews();
   await runSeo();
   await runPageHealth();
+  await runPhoneChrome();
   await browser.close();
 
   const failed = results.filter((r) => !r.ok);
