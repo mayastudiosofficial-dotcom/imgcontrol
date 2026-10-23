@@ -109,16 +109,21 @@ export default function AdvancedCrop() {
   }
 
   function updateCrop(partial: Partial<CropRect>) {
-    setCrop((current) => {
-      const next = { ...current, ...partial };
+    const next = { ...crop, ...partial };
 
-      next.x = Math.max(0, Math.min(next.x, Math.max(0, imageSize.w - 1)));
-      next.y = Math.max(0, Math.min(next.y, Math.max(0, imageSize.h - 1)));
-      next.w = Math.max(1, Math.min(next.w, imageSize.w - next.x));
-      next.h = Math.max(1, Math.min(next.h, imageSize.h - next.y));
+    next.x = Math.max(0, Math.min(next.x, Math.max(0, imageSize.w - 1)));
+    next.y = Math.max(0, Math.min(next.y, Math.max(0, imageSize.h - 1)));
+    next.w = Math.max(1, Math.min(next.w, imageSize.w - next.x));
+    next.h = Math.max(1, Math.min(next.h, imageSize.h - next.y));
 
-      return next;
-    });
+    setCrop(next);
+
+    // Keep the export size in step with the crop (as dragging the box does),
+    // otherwise the cropped area is stretched to the previous export size.
+    if (Math.round(next.w) !== Math.round(crop.w) || Math.round(next.h) !== Math.round(crop.h)) {
+      setOutputWidth(Math.round(next.w));
+      setOutputHeight(Math.round(next.h));
+    }
   }
 
   function applyRatio(nextRatio: string) {

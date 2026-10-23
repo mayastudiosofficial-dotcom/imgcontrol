@@ -441,6 +441,177 @@ async function runSeo() {
   });
 }
 
+/* ---------- cropper, batches, size limit, RAW ---------- */
+
+async function noisyJpeg(page, w, h) {
+  const b64 = await page.evaluate(async ([w, h]) => {
+    const c = document.createElement("canvas");
+    c.width = w;
+    c.height = h;
+    const x = c.getContext("2d");
+    const img = x.createImageData(w, h);
+    for (let i = 0; i < img.data.length; i += 4) {
+      img.data[i] = Math.random() * 255;
+      img.data[i + 1] = Math.random() * 255;
+      img.data[i + 2] = Math.random() * 255;
+      img.data[i + 3] = 255;
+    }
+    x.putImageData(img, 0, 0);
+    const blob = await new Promise((r) => c.toBlob(r, "image/jpeg", 0.95));
+    const u = new Uint8Array(await blob.arrayBuffer());
+    let s = "";
+    u.forEach((v) => (s += String.fromCharCode(v)));
+    return btoa(s);
+  }, [w, h]);
+  return Buffer.from(b64, "base64");
+}
+
+async function runExtras() {
+  console.log("\nCropper, batches, size limit, RAW");
+
+  await test("image-cropper: crop and export gives the chosen size", async () => {
+    const page = await newPage();
+    try {
+      await page.goto(`${BASE}/image-cropper`);
+      await page.locator("input[type=file]").first().setInputFiles({ name: "a.png", mimeType: "image/png", buffer: fixtures.png });
+      await page.locator("#crop-width").waitFor({ timeout: 10000 });
+      await page.locator("#crop-x").fill("10");
+      await page.locator("#crop-y").fill("10");
+      await page.locator("#crop-width").fill("120");
+      await page.locator("#crop-height").fill("80");
+      await page.getByRole("button", { name: /Crop & Export/i }).click();
+      const res = await page.evaluate(() => window.__waitFor("png", 15000));
+      expect(res.ok, `no cropped png (saw: ${(res.seen || []).join(", ") || "nothing"})`);
+      const dims = await page.evaluate(async () => {
+        for (const b of window.__blobs) {
+          if ((await window.__sig(b)) === "png") {
+            const bmp = await createImageBitmap(b);
+            if (bmp.width === 120 && bmp.height === 80) return [bmp.width, bmp.height];
+          }
+        }
+        return null;
+      });
+      expect(dims, "no exported image with the 120x80 crop size");
+    } finally {
+      await page.context().close();
+    }
+  });
+
+  await test("jpg-to-png: three files at once and a ZIP with all of them", async () => {
+    const page = await newPage();
+    try {
+      await page.goto(`${BASE}/jpg-to-png`);
+      await page.locator("input[type=file]").first().setInputFiles(
+        [1, 2, 3].map((n) => ({ name: `photo${n}.jpg`, mimeType: "image/jpeg", buffer: fixtures.jpg })),
+      );
+      await page.waitForTimeout(600);
+      await page.getByRole("button", { name: /Convert to PNG/i }).click();
+      await page.getByRole("button", { name: /Download All ZIP/i }).waitFor({ timeout: 30000 });
+      expect((await page.getByRole("button", { name: /^Download$/ }).count()) === 3, "expected three results");
+      await page.evaluate(() => {
+        window.__blobs.length = 0;
+        HTMLAnchorElement.prototype.click = function () {};
+      });
+      await page.getByRole("button", { name: /Download All ZIP/i }).click();
+      const res = await page.evaluate(() => window.__waitFor("zip", 15000));
+      expect(res.ok, "no ZIP produced");
+      const entries = await page.evaluate(async () => {
+        const b = window.__blobs.find((x) => x.size > 0);
+        for (const blob of window.__blobs) {
+          if ((await window.__sig(blob)) === "zip") {
+            const u = new Uint8Array(await blob.arrayBuffer());
+            let n = 0;
+            for (let i = 0; i < u.length - 3; i++) if (u[i] === 0x50 && u[i + 1] === 0x4b && u[i + 2] === 3 && u[i + 3] === 4) n++;
+            return n;
+          }
+        }
+        return b ? -1 : 0;
+      });
+      expect(entries === 3, `ZIP has ${entries} files, expected 3`);
+    } finally {
+      await page.context().close();
+    }
+  });
+
+  await test("jpg-to-webp: maximum output size is respected", async () => {
+    const page = await newPage();
+    try {
+      await page.goto(`${BASE}/jpg-to-webp`);
+      const noisy = await noisyJpeg(page, 900, 700);
+      await page.locator("input[type=file]").first().setInputFiles({ name: "noise.jpg", mimeType: "image/jpeg", buffer: noisy });
+      await page.waitForTimeout(600);
+      await page.getByText("Set maximum output size").click();
+      await page.locator("input[type=number]").first().fill("40");
+      await page.getByRole("button", { name: /Convert to WebP/i }).click();
+      const res = await page.evaluate(() => window.__waitFor("webp", 30000));
+      expect(res.ok, "no webp output");
+      expect(noisy.length > 150000, "test image is too small to need shrinking");
+      expect(res.size <= 40 * 1024 * 1.1, `output is ${Math.round(res.size / 1024)} KB, the limit was 40 KB`);
+    } finally {
+      await page.context().close();
+    }
+  });
+
+  await test("raw-to-jpg: page loads and accepts RAW formats", async () => {
+    const page = await newPage();
+    try {
+      await page.goto(`${BASE}/raw-to-jpg`);
+      const accept = await page.locator("input[type=file]").first().getAttribute("accept");
+      expect(/\.dng/.test(accept) && /\.cr2/.test(accept) && /\.nef/.test(accept), `unexpected accept list: ${accept}`);
+      await page.getByRole("button", { name: /Convert RAW to JPG/i }).waitFor({ timeout: 5000 });
+    } finally {
+      await page.context().close();
+    }
+  });
+
+  if (process.env.RAW_SAMPLE && fs.existsSync(process.env.RAW_SAMPLE)) {
+    await test(`raw-to-jpg: real conversion of ${path.basename(process.env.RAW_SAMPLE)}`, async () => {
+      const page = await newPage();
+      try {
+        await page.goto(`${BASE}/raw-to-jpg`);
+        await page.locator("input[type=file]").first().setInputFiles(process.env.RAW_SAMPLE);
+        await page.waitForTimeout(600);
+        await page.getByRole("button", { name: /Convert RAW to JPG/i }).click();
+        const res = await page.evaluate(() => window.__waitFor("jpg", 120000));
+        expect(res.ok, `no jpg output (saw: ${(res.seen || []).join(", ") || "nothing"})`);
+      } finally {
+        await page.context().close();
+      }
+    });
+  } else {
+    console.log("  skip  raw-to-jpg real conversion (set RAW_SAMPLE=path/to/photo.dng to run it)");
+  }
+}
+
+/* ---------- console errors and phone layout on every page ---------- */
+
+async function runPageHealth() {
+  console.log("\nPage health");
+  const xml = await (await fetch(`${BASE}/sitemap.xml`)).text();
+  const routes = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => new URL(m[1]).pathname);
+
+  for (const route of routes) {
+    await test(`health ${route} (no errors, fits a phone screen)`, async () => {
+      const context = await browser.newContext({ viewport: { width: 400, height: 800 }, isMobile: true });
+      const page = await context.newPage();
+      const problems = [];
+      page.on("pageerror", (e) => problems.push(`script error: ${e.message}`));
+      page.on("console", (m) => m.type() === "error" && problems.push(`console: ${m.text().slice(0, 120)}`));
+      page.on("response", (r) => {
+        if (r.status() >= 400 && r.url().startsWith(BASE)) problems.push(`${r.status()} ${r.url().replace(BASE, "")}`);
+      });
+      try {
+        await page.goto(`${BASE}${route}`, { waitUntil: "networkidle" });
+        const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+        if (overflow > 1) problems.push(`page is ${overflow}px wider than a 400px screen`);
+        expect(problems.length === 0, problems.join("; "));
+      } finally {
+        await context.close();
+      }
+    });
+  }
+}
+
 /* ---------- main ---------- */
 
 async function main() {
@@ -457,7 +628,9 @@ async function main() {
 
   await runConverters();
   await runPdf();
+  await runExtras();
   await runSeo();
+  await runPageHealth();
   await browser.close();
 
   const failed = results.filter((r) => !r.ok);
