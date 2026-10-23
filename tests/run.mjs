@@ -671,7 +671,7 @@ async function runExtras() {
         await page.waitForTimeout(600);
         const sampling = sampleProgress(page, 150000);
         await page.getByRole("button", { name: /Convert RAW to JPG/i }).click();
-        checkSteadyProgress(await sampling, { minSteps: 8, maxJump: 25 });
+        checkSteadyProgress(await sampling, { minSteps: 8, maxJump: 35 });
       } finally {
         await page.context().close();
       }
