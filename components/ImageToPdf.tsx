@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { normalizeInputFile } from "@/lib/codecs";
+import PdfPreview from "@/components/PdfPreview";
 import { jsPDF } from "jspdf";
 
 function fmt(b: number) {
@@ -367,6 +368,8 @@ export default function ImageToPdf() {
             </button>
           )}
         </div>
+
+        {result && <PdfPreview blob={result} />}
       </div>
     </div>
   );

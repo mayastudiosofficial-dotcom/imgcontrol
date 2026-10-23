@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import JSZip from "jszip";
+import ResultThumb from "@/components/ResultThumb";
 import LibRaw from "libraw-wasm";
 
 type Output = {
@@ -233,6 +234,8 @@ export default function RawToJpgClient() {
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [stage, setStage] = useState("");
+  const converting = useRef(false);
 
   function selectFiles(list: FileList | File[]) {
     const accepted = Array.from(list).filter((file) => {
@@ -261,6 +264,9 @@ export default function RawToJpgClient() {
     // a small JPG preview using the same browser-side RAW decoder.
     (async () => {
       for (const file of nextFiles) {
+        // A conversion the visitor asked for always goes before background previews.
+        if (converting.current) break;
+
         try {
           const preview = await rawToJpeg(file, 350 * 1024, true);
           const previewUrl = URL.createObjectURL(preview.blob);
@@ -283,6 +289,7 @@ export default function RawToJpgClient() {
     if (!files.length || busy) return;
 
     setBusy(true);
+    converting.current = true;
     setProgress(0);
     setError("");
     setNotice("");
@@ -296,6 +303,7 @@ export default function RawToJpgClient() {
 
       for (let i = 0; i < files.length; i += 1) {
         const file = files[i];
+        setStage(`Converting ${file.name} (${i + 1} of ${files.length}). Large RAW files can take up to a minute, please keep this tab open.`);
         const converted = await rawToJpeg(file, maxBytes);
         if (converted.reduced) reducedCount += 1;
         next.push({
@@ -319,6 +327,8 @@ export default function RawToJpgClient() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "RAW conversion failed.");
     } finally {
+      converting.current = false;
+      setStage("");
       setBusy(false);
     }
   }
@@ -506,6 +516,7 @@ export default function RawToJpgClient() {
 
         {error && <div className="notice">{error}</div>}
         {notice && <div className="notice">{notice}</div>}
+        {busy && stage && <div className="notice">{stage}</div>}
 
         <div className="actions" style={{ justifyContent: "flex-start", marginTop: 18 }}>
           <button type="button" className="btn btnPrimary" disabled={!files.length || busy} onClick={convertAll}>
@@ -534,10 +545,13 @@ export default function RawToJpgClient() {
             <div className="fileList">
               {outputs.map((output) => (
                 <div className="fileRow" key={output.name}>
-                  <div>
-                    <div className="fileName">{output.name}</div>
-                    <div className="fileSize">
-                      {fmt(output.original)} → {fmt(output.blob.size)} · {output.width} × {output.height}
+                  <div className="fileMeta">
+                    <ResultThumb blob={output.blob} alt={`Preview of ${output.name}`} size={72} />
+                    <div>
+                      <div className="fileName">{output.name}</div>
+                      <div className="fileSize">
+                        {fmt(output.original)} → {fmt(output.blob.size)} · {output.width} × {output.height}
+                      </div>
                     </div>
                   </div>
                   <button type="button" className="btn btnPrimary btnSmall" onClick={() => downloadOne(output)}>

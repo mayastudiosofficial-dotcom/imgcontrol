@@ -262,6 +262,11 @@ async function runConverters() {
         if (label) await page.getByRole("button", { name: new RegExp(`^${label}`) }).first().click();
         await page.getByRole("button", { name: /Process Images/i }).click();
         await page.getByRole("button", { name: /^Download$/ }).first().waitFor({ timeout: 30000 });
+        // The result row must show the real output before it is downloaded.
+        await page.waitForFunction(() => {
+          const el = document.querySelector("img.resultThumb");
+          return el && el.complete && el.naturalWidth > 50;
+        }, null, { timeout: 10000 });
         await page.evaluate(() => {
           window.__blobs.length = 0;
           const original = HTMLAnchorElement.prototype.click;
@@ -307,6 +312,8 @@ async function runPdf() {
         await page.getByRole("button", { name: /Create PDF/i }).click();
         const dl = page.getByRole("button", { name: /Download PDF/i });
         await dl.waitFor({ timeout: 30000 });
+        // The finished PDF is drawn on the page before it is downloaded.
+        await page.locator('canvas[aria-label="PDF page 1"]').waitFor({ timeout: 20000 });
         await page.evaluate(() => {
           window.__blobs.length = 0;
           HTMLAnchorElement.prototype.click = function () {};
@@ -582,6 +589,11 @@ async function runExtras() {
         await page.getByRole("button", { name: /Convert RAW to JPG/i }).click();
         const res = await page.evaluate(() => window.__waitFor("jpg", 120000));
         expect(res.ok, `no jpg output (saw: ${(res.seen || []).join(", ") || "nothing"})`);
+        // The finished JPG is shown in the result row before it is downloaded.
+        await page.waitForFunction(() => {
+          const el = document.querySelector("img.resultThumb");
+          return el && el.complete && el.naturalWidth > 100;
+        }, null, { timeout: 120000 });
       } finally {
         await page.context().close();
       }

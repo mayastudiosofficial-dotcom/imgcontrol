@@ -4,6 +4,7 @@
 import { useRef, useState } from "react";
 import { encodeCanvasWithWasm, normalizeInputFile } from "@/lib/codecs";
 import NextSteps from "@/components/NextSteps";
+import ResultThumb from "@/components/ResultThumb";
 import JSZip from "jszip";
 
 type ToolMode = "compress" | "convert" | "resize" | "optimize";
@@ -1626,6 +1627,10 @@ export default function OptimizerClient({
                     key={output.name}
                   >
 
+                    <div className="fileMeta">
+
+                    <ResultThumb blob={output.blob} alt={`Preview of ${output.name}`} />
+
                     <div>
 
                       <div className="fileName">
@@ -1663,6 +1668,8 @@ export default function OptimizerClient({
                           : 0}
                         % saved
                       </div>
+
+                    </div>
 
                     </div>
 
