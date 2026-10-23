@@ -179,7 +179,7 @@ async function convertImage(
       try {
         return await encodeCanvasWithWasm(
           canvas,
-          outputMime as "image/avif" | "image/heic"
+          outputMime as "image/avif"
         );
       } finally {
         stop();

@@ -207,7 +207,6 @@ async function encodeSpecial(
   if (format === "gif") return makeGifBlob(canvas);
   
   if (format === "avif") return encodeCanvasWithWasm(canvas, "image/avif", 0.7);
-  if (format === "heic") return encodeCanvasWithWasm(canvas, "image/heic", 0.8);
 
   throw new Error(`Unsupported output format: ${format}`);
 }
