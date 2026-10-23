@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import DedicatedImageConverterPage from "@/components/DedicatedImageConverterPage";
 
 export const metadata: Metadata = {
-  title: "HEIC to PNG Converter Online Free | ImgControl",
+  title: "HEIC to PNG Converter Online Free",
   description:
     "Convert HEIC to PNG online for free with a fast, high-quality HEIC to PNG image converter. Convert HEIC photos to PNG for editing, transparency, websites and digital projects.",
   alternates: {
@@ -32,6 +32,7 @@ export default function Page() {
   return (
     <>
       <DedicatedImageConverterPage
+      slug="heic-to-png"
         sourceLabel="HEIC"
         outputLabel="PNG"
         outputMime="image/png"

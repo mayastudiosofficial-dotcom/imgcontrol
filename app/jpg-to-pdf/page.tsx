@@ -1,1 +1,49 @@
-import type {Metadata} from "next";import OptimizerClient from "@/components/OptimizerClient";export const metadata:Metadata={title:"JPG to PDF — Free Online Converter",description:"Convert JPG images to PDF documents online.",alternates:{canonical:"/jpg-to-pdf"}};export default function Page(){return <><section className="pageHead"><div className="container"><div className="kicker">ImgControl · Dedicated Conversion</div><h1>JPG to PDF</h1><p>Convert JPG images to PDF documents online.</p></div></section><section className="section" style={{paddingTop:18}}><OptimizerClient mode="convert"/></section><section className="section"><div className="container prose"><div className="card"><h2>JPG to PDF online</h2><p>Convert JPG images to PDF documents online. ImgControl keeps this conversion on a dedicated URL with a consistent workflow.</p><div className="faq" style={{marginTop:20}}><details><summary>Can I process multiple images?</summary><p>Yes, the shared tool interface supports batch selection for supported raster images.</p></details><details><summary>Can I choose an output size?</summary><p>The general converter is format-focused; compression and target-size control are available in the Image Compressor. PDF workflows have their own output-size option where appropriate.</p></details><details><summary>Are images uploaded?</summary><p>Core raster conversions are designed to run in the browser.</p></details></div></div></div></section></>}
+import type { Metadata } from "next";
+import ImageToPdf from "@/components/ImageToPdf";
+import ToolSeoContent from "@/components/ToolSeoContent";
+
+export const metadata: Metadata = {
+  title: "JPG to PDF Converter Online – Free",
+  description:
+    "Convert JPG and JPEG images to PDF online for free. Combine one or many JPG images into a single PDF directly in your browser, with no upload and no sign-up.",
+  alternates: {
+    canonical: "/jpg-to-pdf",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+  openGraph: {
+    title: "JPG to PDF Converter Online – Free | ImgControl",
+    description:
+      "Turn JPG images into a PDF online for free. Fast, private and browser-based.",
+    url: "https://imgcontrol.com/jpg-to-pdf",
+    siteName: "ImgControl",
+    type: "website",
+  },
+};
+
+export default function Page() {
+  return (
+    <>
+      <section className="pageHead">
+        <div className="container">
+          <div className="kicker">ImgControl · PDF Tools</div>
+
+          <h1>JPG to PDF</h1>
+
+          <p>
+            Convert JPG and JPEG images to a single or multi-page PDF directly in your
+            browser.
+          </p>
+        </div>
+      </section>
+
+      <section className="section" style={{ paddingTop: 18 }}>
+        <ImageToPdf />
+      </section>
+
+      <ToolSeoContent slug="jpg-to-pdf" />
+    </>
+  );
+}

@@ -8,6 +8,7 @@ import {
 } from "pdfjs-dist/legacy/build/pdf.mjs";
 // @ts-ignore
 import { GIFEncoder, quantize, applyPalette } from "gifenc";
+import { encodeCanvasWithWasm } from "@/lib/codecs";
 
 if (typeof window !== "undefined") {
   GlobalWorkerOptions.workerSrc = new URL(
@@ -190,10 +191,9 @@ async function encodeSpecial(
   if (format === "eps") return makeEpsBlob(canvas);
   if (format === "gif") return makeGifBlob(canvas);
   
-  // For HEIC and AVIF, fallback smoothly using high-quality JPEG/PNG data without crashing WASM
-  if (format === "heic" || format === "avif") {
-    return canvasToBlob(canvas, "image/jpeg", 0.95);
-  }
+  if (format === "avif") return encodeCanvasWithWasm(canvas, "image/avif", 0.7);
+  // HEIC cannot be encoded in the browser reliably yet; keep the safe JPEG fallback.
+  if (format === "heic") return canvasToBlob(canvas, "image/jpeg", 0.95);
 
   throw new Error(`Unsupported output format: ${format}`);
 }

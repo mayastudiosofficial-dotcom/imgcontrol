@@ -1,8 +1,9 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import ArticleJsonLd from "@/components/ArticleJsonLd";
 
 export const metadata: Metadata = {
-  title: "HEIC vs JPG: What Is the Difference? | ImgControl",
+  title: "HEIC vs JPG: What Is the Difference?",
   description:
     "Learn the differences between HEIC and JPG image formats, including image quality, compression, file size, compatibility, storage and everyday use.",
   alternates: {
@@ -660,6 +661,7 @@ export default function Page() {
           </article>
         </div>
       </section>
+    <ArticleJsonLd slug="heic-vs-jpg" />
     </main>
   );
 }

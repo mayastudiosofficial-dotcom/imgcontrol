@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import DedicatedImageConverterPage from "@/components/DedicatedImageConverterPage";
 
 export const metadata: Metadata = {
-  title: "PNG to JPG Converter Online – Free | ImgControl",
+  title: "PNG to JPG Converter Online – Free",
   description:
     "Convert PNG images to JPG online for free. Quickly convert PNG to JPEG, create smaller and widely compatible JPG files, and process your images directly in your browser.",
   alternates: {
@@ -31,6 +31,7 @@ export const metadata: Metadata = {
 export default function Page() {
   return (
     <DedicatedImageConverterPage
+      slug="png-to-jpg"
       sourceLabel="PNG"
       outputLabel="JPG"
       outputMime="image/jpeg"

@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import OptimizerClient from "@/components/OptimizerClient";
+import ToolSeoContent from "@/components/ToolSeoContent";
 
 export const metadata: Metadata = {
-  title: "Image Compressor Online – Compress JPG, PNG, WebP | ImgControl",
+  title: "Image Compressor Online – Compress JPG, PNG, WebP",
   description:
     "Compress JPG, PNG, WebP, GIF, BMP and AVIF images online for free. Reduce image file size while keeping good quality. Fast, secure and browser-based.",
   alternates: {
@@ -41,6 +42,7 @@ export default function Page() {
       <section className="section" style={{ paddingTop: 18 }}>
         <OptimizerClient mode="compress" />
       </section>
+    <ToolSeoContent slug="image-compressor" />
     </>
   );
 }

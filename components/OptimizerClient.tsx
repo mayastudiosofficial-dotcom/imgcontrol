@@ -2,6 +2,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { encodeCanvasWithWasm, normalizeInputFile } from "@/lib/codecs";
 import JSZip from "jszip";
 
 type ToolMode = "compress" | "convert" | "resize" | "optimize";
@@ -66,7 +67,9 @@ function stripExt(filename: string): string {
   return filename.replace(/\.[^.]+$/, "");
 }
 
-async function loadImage(file: File): Promise<HTMLImageElement> {
+async function loadImage(sourceFile: File): Promise<HTMLImageElement> {
+  const file = await normalizeInputFile(sourceFile);
+
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file);
     const image = new Image();
@@ -108,6 +111,10 @@ async function encodeImage(
   }
 
   context.drawImage(image, 0, 0, width, height);
+
+  if (mime === "image/avif") {
+    return encodeCanvasWithWasm(canvas, "image/avif", quality);
+  }
 
   return new Promise((resolve, reject) => {
     canvas.toBlob(

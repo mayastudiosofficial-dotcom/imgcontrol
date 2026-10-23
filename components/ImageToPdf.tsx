@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { normalizeInputFile } from "@/lib/codecs";
 import { jsPDF } from "jspdf";
 
 function fmt(b: number) {
@@ -24,7 +25,7 @@ export default function ImageToPdf() {
   const [err, setErr] = useState("");
 
   function add(list: FileList) {
-    const rawImages = Array.from(list).filter((f) => f.type.startsWith("image/"));
+    const rawImages = Array.from(list).filter((f) => f.type.startsWith("image/") || /.(heic|heif|avif)$/i.test(f.name));
     
     if (files.length + rawImages.length > 50) {
       setErr("Maximum 50 images can be converted at a time. Extra images were skipped.");
@@ -114,7 +115,9 @@ export default function ImageToPdf() {
 
     try {
       const loadedImages: HTMLImageElement[] = await Promise.all(
-        files.map((file) => {
+        files.map(async (original) => {
+          const file = await normalizeInputFile(original);
+
           return new Promise<HTMLImageElement>((resolve, reject) => {
             const url = URL.createObjectURL(file);
             const img = new Image();

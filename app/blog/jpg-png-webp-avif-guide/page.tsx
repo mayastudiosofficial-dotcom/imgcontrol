@@ -1,8 +1,9 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import ArticleJsonLd from "@/components/ArticleJsonLd";
 
 export const metadata: Metadata = {
-  title: "JPG vs PNG vs WebP vs AVIF: Which Image Format Is Best? | ImgControl",
+  title: "JPG vs PNG vs WebP vs AVIF: Which Image Format Is Best?",
   description:
     "Compare JPG, PNG, WebP and AVIF image formats, including compression, transparency, quality, file size, compatibility and practical website use cases.",
   alternates: {
@@ -582,6 +583,7 @@ export default function Page() {
           </article>
         </div>
       </section>
+    <ArticleJsonLd slug="jpg-png-webp-avif-guide" />
     </main>
   );
 }

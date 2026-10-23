@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { ARTICLES } from "@/lib/tools";
 
 const paths = [
   "",
@@ -50,6 +51,8 @@ const paths = [
   "pdf-to-eps",
 
   "raw-to-jpg",
+
+  ...Object.keys(ARTICLES).map((slug) => `blog/${slug}`),
 ];
 
 export default function sitemap(): MetadataRoute.Sitemap {
@@ -66,6 +69,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority:
       path === ""
         ? 1
+        : path.startsWith("blog/")
+        ? 0.7
         : path === "tools"
         ? 0.9
         : path === "privacy" ||

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { normalizeInputFile } from "@/lib/codecs";
 
 type CropRect = {
   x: number;
@@ -84,9 +85,12 @@ export default function AdvancedCrop() {
       return;
     }
 
-    setFile(nextFile);
     setResult(null);
     setError("");
+
+    normalizeInputFile(nextFile)
+      .then((ready) => setFile(ready))
+      .catch(() => setError("This image could not be read."));
   }
 
   function handleImageLoad(event: React.SyntheticEvent<HTMLImageElement>) {

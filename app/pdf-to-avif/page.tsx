@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import PdfToImage from "@/components/PdfToImage";
+import ToolSeoContent from "@/components/ToolSeoContent";
 
 export const metadata: Metadata = {
-  title: "PDF to AVIF Converter Online Free | ImgControl",
+  title: "PDF to AVIF Converter Online Free",
   description:
     "Convert PDF pages to AVIF images online for free with a fast, high-quality PDF to AVIF image converter. Create AVIF files from PDF pages for modern websites and digital projects.",
   alternates: {
@@ -749,6 +750,7 @@ export default function Page() {
           </article>
         </div>
       </section>
+    <ToolSeoContent slug="pdf-to-avif" />
     </>
   );
 }

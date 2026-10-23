@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import PdfToImage from "@/components/PdfToImage";
+import ToolSeoContent from "@/components/ToolSeoContent";
 
 export const metadata: Metadata = {
-  title: "PDF to GIF Converter Online Free | ImgControl",
+  title: "PDF to GIF Converter Online Free",
   description:
     "Convert PDF pages to GIF images online for free with a fast and simple PDF to GIF image converter. Create GIF files from PDF pages for sharing, web use and digital projects.",
   alternates: {
@@ -748,6 +749,7 @@ export default function Page() {
           </article>
         </div>
       </section>
+    <ToolSeoContent slug="pdf-to-gif" />
     </>
   );
 }

@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import PdfToImage from "@/components/PdfToImage";
+import ToolSeoContent from "@/components/ToolSeoContent";
 
 export const metadata: Metadata = {
-  title: "PDF to PNG Converter Online Free | ImgControl",
+  title: "PDF to PNG Converter Online Free",
   description:
     "Convert PDF to PNG online for free with a fast, high-quality PDF to PNG image converter. Create PNG images from PDF pages with a simple browser-based workflow.",
   alternates: {
@@ -811,6 +812,7 @@ export default function Page() {
           </article>
         </div>
       </section>
+    <ToolSeoContent slug="pdf-to-png" />
     </>
   );
 }

@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import PdfToImage from "@/components/PdfToImage";
+import ToolSeoContent from "@/components/ToolSeoContent";
 
 export const metadata: Metadata = {
-  title: "PDF to BMP Converter Online Free | ImgControl",
+  title: "PDF to BMP Converter Online Free",
   description:
     "Convert PDF to BMP online for free with a high-quality PDF to BMP image converter. Create BMP images from PDF pages with a simple browser-based workflow.",
   alternates: {
@@ -754,6 +755,7 @@ export default function Page() {
           </article>
         </div>
       </section>
+    <ToolSeoContent slug="pdf-to-bmp" />
     </>
   );
 }

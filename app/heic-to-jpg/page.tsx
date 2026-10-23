@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import DedicatedImageConverterPage from "@/components/DedicatedImageConverterPage";
 
 export const metadata: Metadata = {
-  title: "HEIC to JPG Converter Online Free Unlimited | ImgControl",
+  title: "HEIC to JPG Converter Online Free Unlimited",
   description:
     "Convert HEIC to JPG online for free with a fast, high-quality HEIC to JPG image converter. Convert single or multiple HEIC images with a simple browser-based workflow.",
   alternates: {
@@ -32,6 +32,7 @@ export default function Page() {
   return (
     <>
       <DedicatedImageConverterPage
+      slug="heic-to-jpg"
         sourceLabel="HEIC"
         outputLabel="JPG"
         outputMime="image/jpeg"

@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import PdfToImage from "@/components/PdfToImage";
+import ToolSeoContent from "@/components/ToolSeoContent";
 
 export const metadata: Metadata = {
-  title: "PDF to EPS Converter Online Free | ImgControl",
+  title: "PDF to EPS Converter Online Free",
   description:
     "Convert PDF to EPS online for free with a high-quality PDF to EPS converter. Create EPS files from supported PDF pages for vector, Illustrator, design and graphics workflows.",
   alternates: {
@@ -785,6 +786,7 @@ export default function Page() {
           </article>
         </div>
       </section>
+    <ToolSeoContent slug="pdf-to-eps" />
     </>
   );
 }

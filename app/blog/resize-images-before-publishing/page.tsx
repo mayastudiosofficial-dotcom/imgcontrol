@@ -1,8 +1,9 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import ArticleJsonLd from "@/components/ArticleJsonLd";
 
 export const metadata: Metadata = {
-  title: "How to Resize Images Before Publishing | ImgControl",
+  title: "How to Resize Images Before Publishing",
   description:
     "Learn how to resize images correctly before publishing on websites, blogs, social media and online stores while keeping the right dimensions, aspect ratio and visual quality.",
   alternates: {
@@ -517,6 +518,7 @@ export default function Page() {
           </article>
         </div>
       </section>
+    <ArticleJsonLd slug="resize-images-before-publishing" />
     </main>
   );
 }

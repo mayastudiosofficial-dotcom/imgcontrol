@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import AdvancedCrop from "@/components/AdvancedCrop";
+import ToolSeoContent from "@/components/ToolSeoContent";
 
 export const metadata: Metadata = {
-  title: "Image Cropper Online – Crop JPG, PNG, WebP Images | ImgControl",
+  title: "Image Cropper Online – Crop JPG, PNG, WebP Images",
   description:
     "Crop JPG, PNG, WebP, GIF, BMP and other images online for free. Use a visual crop box, choose aspect ratios, view live dimensions and export your cropped image easily.",
   alternates: {
@@ -41,6 +42,7 @@ export default function Page() {
       <section className="section" style={{ paddingTop: 18 }}>
         <AdvancedCrop />
       </section>
+    <ToolSeoContent slug="image-cropper" />
     </>
   );
 }

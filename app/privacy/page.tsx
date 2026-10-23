@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy | ImgControl",
+  title: "Privacy Policy",
   description:
     "Read the ImgControl Privacy Policy to understand how information, cookies, analytics, advertising and website usage are handled.",
   alternates: {

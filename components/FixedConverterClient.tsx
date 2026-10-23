@@ -1,6 +1,7 @@
 "use client";
 
 import JSZip from "jszip";
+import { encodeCanvasWithWasm, needsWasmEncoder, normalizeInputFile } from "@/lib/codecs";
 import {
   ChangeEvent,
   DragEvent,
@@ -107,7 +108,7 @@ async function convertImage(
   outputMime: string,
   maxBytes?: number
 ) {
-  const image = await loadImage(file);
+  const image = await loadImage(await normalizeInputFile(file));
 
   let width = image.naturalWidth;
   let height = image.naturalHeight;
@@ -147,6 +148,13 @@ async function convertImage(
       width,
       height
     );
+
+    if (needsWasmEncoder(outputMime)) {
+      return encodeCanvasWithWasm(
+        canvas,
+        outputMime as "image/avif" | "image/heic"
+      );
+    }
 
     return canvasToBlob(
       canvas,
